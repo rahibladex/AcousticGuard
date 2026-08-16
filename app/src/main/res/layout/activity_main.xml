@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center_horizontal"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ACOUSTIC GUARD"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="SAFETY PROTECTION"
+        android:textSize="18sp"
+        android:layout_marginBottom="32dp" />
+
+    <Button
+        android:id="@+id/btnSafetyMode"
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:text="@string/start_safety"
+        android:textSize="20sp"
+        android:backgroundTint="#4CAF50"
+        android:layout_marginBottom="32dp" />
+
+    <TextView
+        android:id="@+id/tvAiStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/ai_detection_off"
+        android:textSize="16sp"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/tvGpsStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/gps_off"
+        android:textSize="16sp"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/tvEmergencyContact"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/emergency_contact_none"
+        android:textSize="16sp"
+        android:layout_marginBottom="8dp" />
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <Button
+        android:id="@+id/btnTrustedContacts"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/trusted_contacts"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_marginBottom="8dp" />
+
+    <Button
+        android:id="@+id/btnSettings"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/settings"
+        style="@style/Widget.Material3.Button.TextButton" />
+
+</LinearLayout>

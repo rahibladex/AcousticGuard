@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "C:\\Users\\rahul\\.gradle\\daemon\\8.13\\com.example.acousticguard.app-mergeDebugResources-30:\\layout\\activity_main.xml",
+        "source": "C:\\Users\\rahul\\.gradle\\daemon\\8.13\\com.example.acousticguard.app-main-33:\\layout\\activity_main.xml"
+    },
+    {
+        "merged": "com.example.acousticguard.app-mergeDebugResources-30:/layout/activity_main.xml",
+        "source": "com.example.acousticguard.app-main-33:/layout/activity_main.xml"
+    }
+]
