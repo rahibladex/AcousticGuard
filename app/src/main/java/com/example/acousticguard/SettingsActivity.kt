@@ -50,6 +50,15 @@ class SettingsActivity : ComponentActivity() {
         var emergencyVibration by remember { 
             mutableStateOf(prefs.getBoolean("emergency_vibration", true)) 
         }
+        var silentSosMode by remember { 
+            mutableStateOf(prefs.getBoolean("silent_sos_mode", false)) 
+        }
+        var voiceSos by remember { 
+            mutableStateOf(prefs.getBoolean("voice_sos", false)) 
+        }
+        var lowBatteryAlert by remember { 
+            mutableStateOf(prefs.getBoolean("low_battery_alert", true)) 
+        }
 
         Scaffold(
             topBar = {
@@ -115,6 +124,19 @@ class SettingsActivity : ComponentActivity() {
                         ToggleOption("Vibration on Countdown", emergencyVibration) {
                             emergencyVibration = it
                             prefs.edit().putBoolean("emergency_vibration", it).apply()
+                        }
+                        Divider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
+                        ToggleOption("Silent SOS Mode", silentSosMode) {
+                            silentSosMode = it
+                            prefs.edit().putBoolean("silent_sos_mode", it).apply()
+                        }
+                        ToggleOption("Voice Activation (Help Me)", voiceSos) {
+                            voiceSos = it
+                            prefs.edit().putBoolean("voice_sos", it).apply()
+                        }
+                        ToggleOption("Low Battery Alert", lowBatteryAlert) {
+                            lowBatteryAlert = it
+                            prefs.edit().putBoolean("low_battery_alert", it).apply()
                         }
                     }
                 }

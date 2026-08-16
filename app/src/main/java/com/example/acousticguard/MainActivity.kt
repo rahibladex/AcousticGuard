@@ -9,6 +9,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.os.Handler
+import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -63,6 +65,10 @@ class MainActivity : ComponentActivity() {
     private var countdownValue by mutableStateOf(5)
     private var trustedContacts by mutableStateOf(setOf<String>())
     private var isAddingContact by mutableStateOf(false)
+    
+    private var isSafeWalkActive by mutableStateOf(false)
+    private var safeWalkRemainingTime by mutableStateOf("15:00")
+    private var safeWalkTimer: CountDownTimer? = null
 
     private val audioUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -141,6 +147,8 @@ class MainActivity : ComponentActivity() {
                 StatusDashboard()
 
                 QuickActions()
+
+                SafetyToolsSection()
 
                 ContactsSection()
             }
@@ -280,6 +288,41 @@ class MainActivity : ComponentActivity() {
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Toggle Light")
+            }
+        }
+    }
+
+    @Composable
+    fun SafetyToolsSection() {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Safety Tools", fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = { 
+                            if (isSafeWalkActive) stopSafeWalkTimer() else startSafeWalkTimer()
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isSafeWalkActive) Color.Red else MaterialTheme.colorScheme.tertiary
+                        )
+                    ) {
+                        Text(if (isSafeWalkActive) "Stop Timer ($safeWalkRemainingTime)" else "Safe Walk Timer")
+                    }
+                    Button(
+                        onClick = { triggerFakeCall() },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    ) {
+                        Text("Fake Call")
+                    }
+                }
             }
         }
     }
@@ -536,6 +579,35 @@ class MainActivity : ComponentActivity() {
         current.remove(contact)
         trustedContacts = current
         prefs.edit().putStringSet("trusted_contacts", trustedContacts).apply()
+    }
+
+    private fun startSafeWalkTimer() {
+        isSafeWalkActive = true
+        safeWalkTimer = object : CountDownTimer(15 * 60 * 1000, 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                val minutes = (millisUntilFinished / 1000) / 60
+                val seconds = (millisUntilFinished / 1000) % 60
+                safeWalkRemainingTime = String.format("%02d:%02d", minutes, seconds)
+            }
+            override fun onFinish() {
+                isSafeWalkActive = false
+                emergencyManager.triggerEmergency()
+            }
+        }.start()
+        Toast.makeText(this, "Safe Walk Timer Started (15m)", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun stopSafeWalkTimer() {
+        safeWalkTimer?.cancel()
+        isSafeWalkActive = false
+        Toast.makeText(this, "Safe Walk Timer Stopped", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun triggerFakeCall() {
+        Toast.makeText(this, "Fake call scheduled in 30s", Toast.LENGTH_SHORT).show()
+        Handler(Looper.getMainLooper()).postDelayed({
+            startActivity(Intent(this, FakeCallActivity::class.java))
+        }, 30000)
     }
 
     override fun onResume() {

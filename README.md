@@ -4,16 +4,20 @@ AcousticGuard is an open-source Android application designed for personal safety
 
 ## Features
 
-- **AI Audio Detection**: Real-time monitoring of ambient sound levels and event classification.
-- **Adjustable Sensitivity**: Users can now set the detection threshold (dB) via a seeker bar to work in quieter or noisier environments.
-- **Safety Mode**: Activate monitoring with a single tap.
-- **Emergency Countdown**: A 5-second countdown with **tactile vibration feedback** allows users to feel the trigger even if the phone is in their pocket.
+- **AI Audio & Voice Detection**: Real-time monitoring of ambient sound levels with voice-activated SOS support.
+- **Adjustable Sensitivity**: Users can set the detection threshold (dB) via a seeker bar.
+- **Silent SOS Mode**: Trigger alerts (SMS + Location) discreetly without loud alarms or flashing lights.
+- **Safety Tools**:
+  - **Fake Call**: Schedule a simulated incoming call to escape uncomfortable situations.
+  - **Safe Walk Timer**: A countdown timer that triggers SOS if not checked-in or cancelled.
 - **Automated Alerts**:
-  - **High-Intensity Alarm**: Automatically forces system alarm volume to maximum for audible distress signaling.
-  - **Accurate Location Tracking**: Prioritizes fresh GPS fixes for high-accuracy location sharing.
-  - Flashing flashlight for visual distress signaling.
-  - Automatic SMS with real-time Google Maps location to trusted contacts.
-- **Trusted Contacts Management**: Easily add and manage phone numbers for emergency alerts.
+  - **High-Intensity Alarm**: Forces system alarm volume to 100% for audible distress.
+  - **Proof-of-Event**: Automatically records audio during an emergency for evidence.
+  - **Low Battery SOS**: Notifies contacts when the battery drops below 5%.
+  - **Location Sharing**: Sends fresh high-accuracy GPS coordinates via SMS.
+- **Emergency Countdown**: 5-second countdown with **vibration feedback** before triggering actions.
+- **Trusted Contacts Management**: Easily manage your circle of safety.
+- **Material 3 UI**: Modern, smooth interface with full Dark Mode support.
 
 ## Download
 
@@ -27,6 +31,19 @@ You can download the latest APK from the [Releases](https://github.com/rahiblade
 - **Foreground Services**: Ensuring reliable background monitoring.
 
 ## Version History
+
+### v2.0.0 (Major Feature Update)
+- **Voice SOS**: Trigger emergencies using voice keywords.
+- **Silent SOS**: Discreet alerting without alarm/flashlight.
+- **Safe Walk Timer**: Scheduled SOS trigger for late-night commutes.
+- **Fake Call**: Simulated incoming call tool.
+- **Low Battery Alert**: Auto-notify contacts when battery is < 5%.
+- **Audio Recording**: Automated "Proof-of-Event" recording during emergencies.
+
+### v1.7.0 (Redesign)
+- **Jetpack Compose Migration**: Redesigned UI with Material 3.
+- **Pulsing Safety Toggle**: Modernized active state indicators.
+- **Improved Settings & Themes**: Functional dark/light mode support.
 
 ### v1.6.0 (Motion Trigger)
 - **Shake-to-SOS**: Trigger an emergency instantly by vigorously shaking the device.

@@ -4,14 +4,17 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.os.BatteryManager
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -31,6 +34,21 @@ class AudioDetectionService : Service() {
     private var shakeDetector: ShakeDetector? = null
     private lateinit var emergencyManager: EmergencyManager
 
+    private var lowBatteryAlertSent = false
+    private val batteryReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+            val batteryPct = level * 100 / scale.toFloat()
+            
+            val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
+            if (prefs.getBoolean("low_battery_alert", true) && batteryPct <= 5f && !lowBatteryAlertSent) {
+                lowBatteryAlertSent = true
+                emergencyManager.sendCustomSms("Low Battery Alert! My battery is below 5%.")
+            }
+        }
+    }
+
     companion object {
         const val ACTION_AUDIO_UPDATE = "com.example.acousticguard.AUDIO_UPDATE"
         const val ACTION_EMERGENCY_CONFIRM = "com.example.acousticguard.EMERGENCY_CONFIRM"
@@ -46,6 +64,8 @@ class AudioDetectionService : Service() {
         
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         setupShakeDetector()
+
+        registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
     }
 
     private fun setupShakeDetector() {
@@ -154,6 +174,18 @@ class AudioDetectionService : Service() {
         val eventLabel = classification.first
         val confidence = classification.second
 
+        // Voice SOS (Keyword Detection Placeholder)
+        val voiceSosEnabled = prefs.getBoolean("voice_sos", false)
+        if (voiceSosEnabled && db > threshold + 10) { 
+            // Simple heuristic: if it's loud and voice SOS is enabled, trigger confirmation
+            // This acts as a placeholder for actual "Help Me" keyword spotting
+            Log.i("AudioDetection", "Voice SOS placeholder triggered")
+            val confirmIntent = Intent(ACTION_EMERGENCY_CONFIRM).apply {
+                setPackage(packageName)
+            }
+            sendBroadcast(confirmIntent)
+        }
+
         if (eventLabel == "Scream-like sound" && confidence > 0.8f) {
             screamConfidenceCount++
             Log.d("AudioDetection", "Scream detected. Count: $screamConfidenceCount")
@@ -189,6 +221,8 @@ class AudioDetectionService : Service() {
         shakeDetector?.let {
             sensorManager.unregisterListener(it)
         }
+
+        unregisterReceiver(batteryReceiver)
         
         super.onDestroy()
     }

@@ -4,7 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
+import android.media.MediaRecorder
 import android.media.ToneGenerator
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.telephony.SmsManager
@@ -15,6 +17,7 @@ class EmergencyManager(private val context: Context) {
     private var toneGen: ToneGenerator? = null
     private var isAlarmActive = false
     private var isFlashActive = false
+    private var mediaRecorder: MediaRecorder? = null
     
     private val emergencyLocationManager = EmergencyLocationManager(context)
 
@@ -30,14 +33,19 @@ class EmergencyManager(private val context: Context) {
 
     fun activateEmergencyMode() {
         val prefs = context.getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
-        
-        if (prefs.getBoolean("emergency_alarm", true)) {
-            startAlarm()
+        val isSilent = prefs.getBoolean("silent_sos_mode", false)
+
+        if (!isSilent) {
+            if (prefs.getBoolean("emergency_alarm", true)) {
+                startAlarm()
+            }
+            
+            if (prefs.getBoolean("emergency_flashlight", true)) {
+                startFlashlight()
+            }
         }
-        
-        if (prefs.getBoolean("emergency_flashlight", true)) {
-            startFlashlight()
-        }
+
+        startAudioRecording()
         
         emergencyLocationManager.getLastLocation { location ->
             val mapsLink = if (location != null) {
@@ -52,6 +60,7 @@ class EmergencyManager(private val context: Context) {
     fun stopEmergencyMode() {
         stopAlarm()
         stopFlashlight()
+        stopAudioRecording()
     }
 
     fun toggleAlarm() {
@@ -123,7 +132,46 @@ class EmergencyManager(private val context: Context) {
         isFlashActive = false
     }
 
+    private fun startAudioRecording() {
+        try {
+            val fileName = "${context.getExternalFilesDir(null)}/emergency_audio_${System.currentTimeMillis()}.mp4"
+            mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                MediaRecorder(context)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaRecorder()
+            }.apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                setOutputFile(fileName)
+                prepare()
+                start()
+            }
+            Log.i("EmergencyManager", "Audio recording started: $fileName")
+        } catch (e: Exception) {
+            Log.e("EmergencyManager", "Failed to start audio recording", e)
+        }
+    }
+
+    private fun stopAudioRecording() {
+        try {
+            mediaRecorder?.apply {
+                stop()
+                release()
+            }
+            mediaRecorder = null
+            Log.i("EmergencyManager", "Audio recording stopped")
+        } catch (e: Exception) {
+            Log.e("EmergencyManager", "Failed to stop audio recording", e)
+        }
+    }
+
     private fun sendEmergencySms(mapsLink: String) {
+        sendCustomSms("EMERGENCY! I need help. My location: $mapsLink")
+    }
+
+    fun sendCustomSms(message: String) {
         val prefs = context.getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
         val contacts = prefs.getStringSet("trusted_contacts", setOf()) ?: setOf()
         
@@ -132,7 +180,6 @@ class EmergencyManager(private val context: Context) {
             return
         }
 
-        val message = "EMERGENCY! I need help. My location: $mapsLink"
         try {
             val smsManager = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                 context.getSystemService(SmsManager::class.java)
@@ -143,10 +190,9 @@ class EmergencyManager(private val context: Context) {
             for (contact in contacts) {
                 smsManager.sendTextMessage(contact, null, message, null, null)
             }
-            Log.i("EmergencyManager", "Emergency SMS sent to ${contacts.size} contacts.")
+            Log.i("EmergencyManager", "SMS sent to ${contacts.size} contacts: $message")
         } catch (e: Exception) {
-            e.printStackTrace()
-            Log.e("EmergencyManager", "Failed to send SMS")
+            Log.e("EmergencyManager", "Failed to send SMS", e)
         }
     }
 }
