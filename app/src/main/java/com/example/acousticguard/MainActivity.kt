@@ -16,6 +16,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.os.VibrationEffect
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
@@ -54,6 +55,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
+        val themeMode = prefs.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+        AppCompatDelegate.setDefaultNightMode(themeMode)
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
@@ -66,7 +71,6 @@ class MainActivity : AppCompatActivity() {
         sbSensitivity = findViewById(R.id.sbSensitivity)
         tvSensitivityValue = findViewById(R.id.tvSensitivityValue)
 
-        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
         val savedSensitivity = prefs.getInt("detection_sensitivity", 80)
         sbSensitivity.progress = savedSensitivity
         tvSensitivityValue.text = "$savedSensitivity dB"
@@ -103,6 +107,10 @@ class MainActivity : AppCompatActivity() {
         val btnTrustedContacts = findViewById<Button>(R.id.btnTrustedContacts)
         btnTrustedContacts.setOnClickListener {
             showTrustedContactsDialog()
+        }
+
+        findViewById<Button>(R.id.btnSettings).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
         }
         
         updateContactsUI()
@@ -225,7 +233,11 @@ class MainActivity : AppCompatActivity() {
         val dialog = builder.create()
         dialog.show()
         
-        startVibration()
+        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("emergency_vibration", true)) {
+            startVibration()
+        }
+
         countdownTimer = object : android.os.CountDownTimer(5000, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 dialog.setMessage("${getString(R.string.are_you_safe)}\nCountdown: ${millisUntilFinished / 1000}")
@@ -277,6 +289,29 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showTrustedContactsDialog() {
+        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
+        val currentContacts = prefs.getStringSet("trusted_contacts", setOf())?.toMutableSet() ?: mutableSetOf()
+        
+        val contactList = currentContacts.toList().sorted()
+        val displayList = contactList.map { "$it (Tap to remove)" }.toTypedArray()
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Trusted Contacts")
+            .setItems(displayList) { _, which ->
+                val contactToRemove = contactList[which]
+                currentContacts.remove(contactToRemove)
+                prefs.edit().putStringSet("trusted_contacts", currentContacts).apply()
+                updateContactsUI()
+                Toast.makeText(this, "Removed $contactToRemove", Toast.LENGTH_SHORT).show()
+            }
+            .setPositiveButton("Add New") { _, _ ->
+                showAddContactDialog()
+            }
+            .setNegativeButton("Close", null)
+            .show()
+    }
+
+    private fun showAddContactDialog() {
         val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
         val currentContacts = prefs.getStringSet("trusted_contacts", setOf())?.toMutableSet() ?: mutableSetOf()
         

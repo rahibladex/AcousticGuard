@@ -18,8 +18,15 @@ class EmergencyManager(private val context: Context) {
     private val emergencyLocationManager = EmergencyLocationManager(context)
 
     fun activateEmergencyMode() {
-        startAlarm()
-        startFlashlight()
+        val prefs = context.getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
+        
+        if (prefs.getBoolean("emergency_alarm", true)) {
+            startAlarm()
+        }
+        
+        if (prefs.getBoolean("emergency_flashlight", true)) {
+            startFlashlight()
+        }
         
         emergencyLocationManager.getLastLocation { location ->
             val mapsLink = if (location != null) {
