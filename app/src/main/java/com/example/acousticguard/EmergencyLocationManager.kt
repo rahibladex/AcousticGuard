@@ -19,6 +19,8 @@ class EmergencyLocationManager(private val context: Context) {
             return
         }
 
+        var isCallbackDelivered = false
+
         // Try to get a fresh location update first for better accuracy
         try {
             val providers = locationManager.getProviders(true)
@@ -33,7 +35,10 @@ class EmergencyLocationManager(private val context: Context) {
             if (provider != null) {
                 locationManager.requestSingleUpdate(provider, object : LocationListener {
                     override fun onLocationChanged(location: Location) {
-                        callback(location)
+                        if (!isCallbackDelivered) {
+                            isCallbackDelivered = true
+                            callback(location)
+                        }
                     }
                     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
                     override fun onProviderEnabled(provider: String) {}
@@ -42,16 +47,22 @@ class EmergencyLocationManager(private val context: Context) {
                 
                 // Fallback: If no update in 5 seconds, use last known location
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    val lastKnown = locationManager.getLastKnownLocation(provider)
-                    callback(lastKnown)
+                    if (!isCallbackDelivered) {
+                        isCallbackDelivered = true
+                        val lastKnown = locationManager.getLastKnownLocation(provider)
+                        callback(lastKnown)
+                    }
                 }, 5000)
             } else {
                 callback(null)
             }
         } catch (e: Exception) {
-            val lastKnown = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            callback(lastKnown)
+            if (!isCallbackDelivered) {
+                isCallbackDelivered = true
+                val lastKnown = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                callback(lastKnown)
+            }
         }
     }
 }
