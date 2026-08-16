@@ -22,6 +22,10 @@ import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
 
+    companion object {
+        const val ACTION_EMERGENCY_STARTED = "com.example.acousticguard.EMERGENCY_STARTED"
+    }
+
     private lateinit var btnSafetyMode: Button
     private lateinit var tvAiStatus: TextView
     private lateinit var tvGpsStatus: TextView
@@ -50,6 +54,8 @@ class MainActivity : AppCompatActivity() {
                 tvAiStatus.text = statusText
             } else if (intent?.action == AudioDetectionService.ACTION_EMERGENCY_CONFIRM) {
                 showCountdownDialog()
+            } else if (intent?.action == ACTION_EMERGENCY_STARTED) {
+                activateEmergencyActions()
             }
         }
     }
@@ -121,6 +127,7 @@ class MainActivity : AppCompatActivity() {
         val filter = IntentFilter()
         filter.addAction(AudioDetectionService.ACTION_AUDIO_UPDATE)
         filter.addAction(AudioDetectionService.ACTION_EMERGENCY_CONFIRM)
+        filter.addAction(ACTION_EMERGENCY_STARTED)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(audioUpdateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {

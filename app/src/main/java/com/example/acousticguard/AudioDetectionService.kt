@@ -7,6 +7,8 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.hardware.Sensor
+import android.hardware.SensorManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
@@ -24,6 +26,10 @@ class AudioDetectionService : Service() {
     private var audioRecord: AudioRecord? = null
     private lateinit var audioClassifier: AudioClassifier
     private var screamConfidenceCount = 0
+    
+    private lateinit var sensorManager: SensorManager
+    private var shakeDetector: ShakeDetector? = null
+    private lateinit var emergencyManager: EmergencyManager
 
     companion object {
         const val ACTION_AUDIO_UPDATE = "com.example.acousticguard.AUDIO_UPDATE"
@@ -36,6 +42,24 @@ class AudioDetectionService : Service() {
         super.onCreate()
         createNotificationChannel()
         audioClassifier = AudioClassifier(this)
+        emergencyManager = EmergencyManager(this)
+        
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        setupShakeDetector()
+    }
+
+    private fun setupShakeDetector() {
+        shakeDetector = ShakeDetector {
+            Log.i("AudioDetection", "Shake SOS detected!")
+            emergencyManager.triggerEmergency()
+        }
+        
+        val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        sensorManager.registerListener(
+            shakeDetector,
+            accelerometer,
+            SensorManager.SENSOR_DELAY_UI
+        )
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -161,6 +185,11 @@ class AudioDetectionService : Service() {
         audioRecord?.stop()
         audioRecord?.release()
         audioRecord = null
+        
+        shakeDetector?.let {
+            sensorManager.unregisterListener(it)
+        }
+        
         super.onDestroy()
     }
 

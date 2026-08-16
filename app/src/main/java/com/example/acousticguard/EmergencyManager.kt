@@ -1,6 +1,7 @@
 package com.example.acousticguard
 
 import android.content.Context
+import android.content.Intent
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.media.ToneGenerator
@@ -16,6 +17,16 @@ class EmergencyManager(private val context: Context) {
     private var isFlashActive = false
     
     private val emergencyLocationManager = EmergencyLocationManager(context)
+
+    fun triggerEmergency() {
+        activateEmergencyMode()
+        
+        // Notify MainActivity to update UI (set isEmergencyMode = true, change button text)
+        val intent = Intent(MainActivity.ACTION_EMERGENCY_STARTED).apply {
+            setPackage(context.packageName)
+        }
+        context.sendBroadcast(intent)
+    }
 
     fun activateEmergencyMode() {
         val prefs = context.getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
