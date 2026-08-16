@@ -11,6 +11,10 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import android.widget.SeekBar
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.os.VibrationEffect
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -21,6 +25,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvAiStatus: TextView
     private lateinit var tvGpsStatus: TextView
     private lateinit var tvEmergencyContact: TextView
+    private lateinit var sbSensitivity: SeekBar
+    private lateinit var tvSensitivityValue: TextView
     private var isSafetyModeActive = false
 
     private val PERMISSION_REQUEST_CODE = 100
@@ -57,6 +63,23 @@ class MainActivity : AppCompatActivity() {
         tvAiStatus = findViewById(R.id.tvAiStatus)
         tvGpsStatus = findViewById(R.id.tvGpsStatus)
         tvEmergencyContact = findViewById(R.id.tvEmergencyContact)
+        sbSensitivity = findViewById(R.id.sbSensitivity)
+        tvSensitivityValue = findViewById(R.id.tvSensitivityValue)
+
+        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
+        val savedSensitivity = prefs.getInt("detection_sensitivity", 80)
+        sbSensitivity.progress = savedSensitivity
+        tvSensitivityValue.text = "$savedSensitivity dB"
+
+        sbSensitivity.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                tvSensitivityValue.text = "$progress dB"
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                prefs.edit().putInt("detection_sensitivity", seekBar?.progress ?: 80).apply()
+            }
+        })
         
         btnSafetyMode.setOnClickListener {
             if (isEmergencyMode) {
@@ -194,6 +217,7 @@ class MainActivity : AppCompatActivity() {
         
         builder.setNegativeButton(R.string.cancel_countdown) { dialog, _ ->
             countdownTimer?.cancel()
+            stopVibration()
             dialog.dismiss()
             Toast.makeText(this, "Emergency cancelled", Toast.LENGTH_SHORT).show()
         }
@@ -201,16 +225,46 @@ class MainActivity : AppCompatActivity() {
         val dialog = builder.create()
         dialog.show()
         
+        startVibration()
         countdownTimer = object : android.os.CountDownTimer(5000, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 dialog.setMessage("${getString(R.string.are_you_safe)}\nCountdown: ${millisUntilFinished / 1000}")
             }
             
             override fun onFinish() {
+                stopVibration()
                 dialog.dismiss()
                 activateEmergencyActions()
             }
         }.start()
+    }
+
+    private fun startVibration() {
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            vibratorManager.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 500, 200), 0))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(longArrayOf(0, 500, 200), 0)
+        }
+    }
+
+    private fun stopVibration() {
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            vibratorManager.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+        vibrator.cancel()
     }
 
     private fun activateEmergencyActions() {

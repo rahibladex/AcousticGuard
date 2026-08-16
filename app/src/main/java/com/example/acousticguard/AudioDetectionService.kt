@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.AudioFormat
@@ -118,9 +119,13 @@ class AudioDetectionService : Service() {
             db = 20 * log10(rms)
         }
 
-        // Pass dummy features (for prototype) and loudness to AudioClassifier
+        // Get user-defined threshold
+        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
+        val threshold = prefs.getInt("detection_sensitivity", 80)
+
+        // Pass dummy features (for prototype), loudness, and threshold to AudioClassifier
         val dummyFeatures = FloatArray(0)
-        val classification = audioClassifier.classifyAudio(dummyFeatures, db)
+        val classification = audioClassifier.classifyAudio(dummyFeatures, db, threshold)
         
         val eventLabel = classification.first
         val confidence = classification.second

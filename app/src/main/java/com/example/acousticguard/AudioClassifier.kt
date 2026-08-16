@@ -34,7 +34,7 @@ class AudioClassifier(private val context: Context) {
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
     }
 
-    fun classifyAudio(audioFeatures: FloatArray, dbLoudness: Double): Pair<String, Float> {
+    fun classifyAudio(audioFeatures: FloatArray, dbLoudness: Double, threshold: Int): Pair<String, Float> {
         if (interpreter != null) {
             // Real TFLite inference logic goes here
             // val outputBuffer = Array(1) { FloatArray(labels.size) }
@@ -43,8 +43,8 @@ class AudioClassifier(private val context: Context) {
         } else {
             // Mock behavior for the student prototype based on Loudness thresholds
             return when {
-                dbLoudness > 80 -> Pair("Scream-like sound", 0.92f)
-                dbLoudness > 70 -> Pair("Loud shouting", 0.85f)
+                dbLoudness > threshold -> Pair("Scream-like sound", 0.92f)
+                dbLoudness > threshold - 10 -> Pair("Loud shouting", 0.85f)
                 dbLoudness > 40 -> Pair("Normal speech", 0.70f)
                 else -> Pair("Background noise", 0.99f)
             }
