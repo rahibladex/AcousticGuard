@@ -26,6 +26,34 @@ You can download the latest APK from the [Releases](https://github.com/rahiblade
 - **Material 3**: Modern Android UI components.
 - **Foreground Services**: Ensuring reliable background monitoring.
 
+## Version History
+
+### v1.6.0 (Motion Trigger)
+- **Shake-to-SOS**: Trigger an emergency instantly by vigorously shaking the device.
+- Uses advanced accelerometer filtering to prevent accidental triggers while walking.
+
+### v1.5.0 (Bug Fixes)
+- Fixed a bug where multiple location SMS messages were sent for a single emergency event.
+
+### v1.4.0 (UX & Control)
+- **App Themes**: Full support for Dark Mode and Light Mode with a manual toggle in Settings.
+- **Contact Management**: Improved Trusted Contacts dialog with the ability to remove existing contacts.
+- **Dedicated Settings Screen**: New activity to toggle specific emergency features (Alarm, Flashlight, Vibration).
+
+### v1.3.0 (Reliability & Intensity)
+- **Improved GPS Accuracy**: Prioritizes fresh GPS fixes for precise high-accuracy location sharing.
+- **High-Intensity Alarm**: Automatically forces system alarm volume to 100% when triggered.
+
+### v1.2.0 (Customization & Feedback)
+- **Adjustable Sensitivity**: New dB threshold slider to calibrate audio detection for different environments.
+- **Countdown Vibration**: Continuous haptic feedback during the 5-second safety countdown.
+
+### v1.0.0 (Initial Release)
+- Core safety monitoring service with AI audio classification.
+- Automated Emergency Protocol: Loud alarm, flashing flashlight, and SMS alerts.
+- Basic Trusted Contacts management.
+- Resolved initial Gradle and Environment compatibility issues.
+
 ## Permissions Required
 
 - `RECORD_AUDIO`: For real-time sound monitoring.

@@ -8,196 +8,419 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.widget.Button
-import android.widget.TextView
-import android.widget.Toast
-import android.widget.SeekBar
+import android.os.CountDownTimer
+import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import android.os.VibrationEffect
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.acousticguard.ui.theme.AcousticGuardTheme
+import com.example.acousticguard.ui.theme.BlueProtection
+import com.example.acousticguard.ui.theme.GreenActive
+import com.example.acousticguard.ui.theme.RedEmergency
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
 
     companion object {
         const val ACTION_EMERGENCY_STARTED = "com.example.acousticguard.EMERGENCY_STARTED"
     }
 
-    private lateinit var btnSafetyMode: Button
-    private lateinit var tvAiStatus: TextView
-    private lateinit var tvGpsStatus: TextView
-    private lateinit var tvEmergencyContact: TextView
-    private lateinit var sbSensitivity: SeekBar
-    private lateinit var tvSensitivityValue: TextView
-    private var isSafetyModeActive = false
-
-    private val PERMISSION_REQUEST_CODE = 100
-
-    private var countdownTimer: android.os.CountDownTimer? = null
     private lateinit var emergencyManager: EmergencyManager
-    private var isEmergencyMode = false
+    private var countdownTimer: CountDownTimer? = null
+
+    // State variables
+    private var isSafetyModeActive by mutableStateOf(false)
+    private var isEmergencyMode by mutableStateOf(false)
+    private var aiStatus by mutableStateOf("AI Detection: OFF")
+    private var gpsStatus by mutableStateOf("GPS: OFF")
+    private var motionStatus by mutableStateOf("Motion SOS: Inactive")
+    private var showEmergencyDialog by mutableStateOf(false)
+    private var countdownValue by mutableStateOf(5)
+    private var trustedContacts by mutableStateOf(setOf<String>())
+    private var isAddingContact by mutableStateOf(false)
 
     private val audioUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == AudioDetectionService.ACTION_AUDIO_UPDATE) {
-                val db = intent.getDoubleExtra(AudioDetectionService.EXTRA_LOUDNESS, 0.0)
-                val event = intent.getStringExtra(AudioDetectionService.EXTRA_EVENT)
-                
-                val statusText = if (event.isNullOrEmpty()) {
-                    "AI Detection: ON (Vol: ${String.format("%.1f", db)} dB)"
-                } else {
-                    "AI Detection: ON (Vol: ${String.format("%.1f", db)} dB) - $event"
+            when (intent?.action) {
+                AudioDetectionService.ACTION_AUDIO_UPDATE -> {
+                    val db = intent.getDoubleExtra(AudioDetectionService.EXTRA_LOUDNESS, 0.0)
+                    val event = intent.getStringExtra(AudioDetectionService.EXTRA_EVENT)
+                    aiStatus = if (event.isNullOrEmpty()) {
+                        "AI Detection: ON (Vol: ${String.format("%.1f", db)} dB)"
+                    } else {
+                        "AI Detection: ON (${String.format("%.1f", db)} dB) - $event"
+                    }
                 }
-                tvAiStatus.text = statusText
-            } else if (intent?.action == AudioDetectionService.ACTION_EMERGENCY_CONFIRM) {
-                showCountdownDialog()
-            } else if (intent?.action == ACTION_EMERGENCY_STARTED) {
-                activateEmergencyActions()
+                AudioDetectionService.ACTION_EMERGENCY_CONFIRM -> {
+                    if (!isEmergencyMode) {
+                        showEmergencyDialog = true
+                        startCountdown()
+                    }
+                }
+                ACTION_EMERGENCY_STARTED -> {
+                    activateEmergencyActions()
+                }
             }
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
-        val themeMode = prefs.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
-        AppCompatDelegate.setDefaultNightMode(themeMode)
-
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
         emergencyManager = EmergencyManager(this)
+        loadSettings()
 
-        btnSafetyMode = findViewById(R.id.btnSafetyMode)
-        tvAiStatus = findViewById(R.id.tvAiStatus)
-        tvGpsStatus = findViewById(R.id.tvGpsStatus)
-        tvEmergencyContact = findViewById(R.id.tvEmergencyContact)
-        sbSensitivity = findViewById(R.id.sbSensitivity)
-        tvSensitivityValue = findViewById(R.id.tvSensitivityValue)
-
-        val savedSensitivity = prefs.getInt("detection_sensitivity", 80)
-        sbSensitivity.progress = savedSensitivity
-        tvSensitivityValue.text = "$savedSensitivity dB"
-
-        sbSensitivity.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                tvSensitivityValue.text = "$progress dB"
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                prefs.edit().putInt("detection_sensitivity", seekBar?.progress ?: 80).apply()
-            }
-        })
-        
-        btnSafetyMode.setOnClickListener {
-            if (isEmergencyMode) {
-                isEmergencyMode = false
-                emergencyManager.stopEmergencyMode()
-                stopSafetyMode()
-                return@setOnClickListener
-            }
-            
-            if (!isSafetyModeActive) {
-                if (checkPermissions()) {
-                    startSafetyMode()
-                } else {
-                    requestPermissions()
+        setContent {
+            AcousticGuardTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    MainScreenContent()
                 }
-            } else {
-                stopSafetyMode()
             }
         }
-        
-        val btnTrustedContacts = findViewById<Button>(R.id.btnTrustedContacts)
-        btnTrustedContacts.setOnClickListener {
-            showTrustedContactsDialog()
-        }
-
-        findViewById<Button>(R.id.btnSettings).setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
-        }
-        
-        updateContactsUI()
     }
 
-    override fun onResume() {
-        super.onResume()
-        val filter = IntentFilter()
-        filter.addAction(AudioDetectionService.ACTION_AUDIO_UPDATE)
-        filter.addAction(AudioDetectionService.ACTION_EMERGENCY_CONFIRM)
-        filter.addAction(ACTION_EMERGENCY_STARTED)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(audioUpdateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(audioUpdateReceiver, filter)
-        }
+    private fun loadSettings() {
+        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
+        trustedContacts = prefs.getStringSet("trusted_contacts", setOf()) ?: setOf()
     }
 
-    override fun onPause() {
-        super.onPause()
-        unregisterReceiver(audioUpdateReceiver)
-    }
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun MainScreenContent() {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("ACOUSTIC GUARD", fontWeight = FontWeight.Bold) },
+                    actions = {
+                        IconButton(onClick = { 
+                            startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
+                        }) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        }
+                    }
+                )
+            }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                MainToggleButton()
 
-    private fun checkPermissions(): Boolean {
-        val permissions = mutableListOf(
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        )
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
-        }
+                StatusDashboard()
 
-        for (permission in permissions) {
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                return false
+                QuickActions()
+
+                ContactsSection()
             }
         }
-        return true
-    }
 
-    private fun requestPermissions() {
-        val permissionsToRequest = mutableListOf(
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.SEND_SMS
-        )
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+        if (showEmergencyDialog) {
+            EmergencyModal()
         }
         
-        ActivityCompat.requestPermissions(
-            this,
-            permissionsToRequest.toTypedArray(),
-            PERMISSION_REQUEST_CODE
+        if (isAddingContact) {
+            AddContactDialog()
+        }
+    }
+
+    @Composable
+    fun MainToggleButton() {
+        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+        
+        val alpha by infiniteTransition.animateFloat(
+            initialValue = 0.2f,
+            targetValue = if (isSafetyModeActive || isEmergencyMode) 0.6f else 0.2f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1000, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "alpha"
+        )
+
+        val scale by infiniteTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = if (isSafetyModeActive || isEmergencyMode) 1.15f else 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1000, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "scale"
+        )
+
+        val buttonColor = when {
+            isEmergencyMode -> RedEmergency
+            isSafetyModeActive -> BlueProtection
+            else -> GreenActive
+        }
+
+        val buttonText = when {
+            isEmergencyMode -> "STOP\nEMERGENCY"
+            isSafetyModeActive -> "PROTECTION\nACTIVE"
+            else -> "START\nPROTECTION"
+        }
+
+        Box(
+            modifier = Modifier
+                .size(220.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            // Pulsing Glow
+            Box(
+                modifier = Modifier
+                    .size(200.dp)
+                    .then(if (isSafetyModeActive || isEmergencyMode) Modifier.size((200 * scale).dp) else Modifier)
+                    .clip(CircleShape)
+                    .background(buttonColor.copy(alpha = if (isSafetyModeActive || isEmergencyMode) alpha else 0.1f))
+            )
+            
+            Button(
+                onClick = { handleToggleClick() },
+                modifier = Modifier
+                    .size(160.dp),
+                shape = CircleShape,
+                colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp, pressedElevation = 12.dp)
+            ) {
+                Text(
+                    text = buttonText,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 18.sp,
+                    lineHeight = 22.sp
+                )
+            }
+        }
+    }
+
+    @Composable
+    fun StatusDashboard() {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StatusCard(modifier = Modifier.weight(1f), title = "AI Audio", status = aiStatus, active = isSafetyModeActive)
+                StatusCard(modifier = Modifier.weight(1f), title = "Motion SOS", status = motionStatus, active = isSafetyModeActive)
+            }
+            StatusCard(modifier = Modifier.fillMaxWidth(), title = "GPS Status", status = gpsStatus, active = isSafetyModeActive)
+        }
+    }
+
+    @Composable
+    fun StatusCard(modifier: Modifier, title: String, status: String, active: Boolean) {
+        Card(
+            modifier = modifier,
+            colors = CardDefaults.cardColors(
+                containerColor = if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(text = title, style = MaterialTheme.typography.labelMedium)
+                Text(text = status, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+            }
+        }
+    }
+
+    @Composable
+    fun QuickActions() {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Button(
+                onClick = { 
+                    emergencyManager.toggleAlarm()
+                },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(containerColor = RedEmergency),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.Warning, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Alarm")
+            }
+            Button(
+                onClick = { 
+                    emergencyManager.toggleFlashlight()
+                },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Toggle Light")
+            }
+        }
+    }
+
+    @Composable
+    fun ContactsSection() {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Trusted Contacts", fontWeight = FontWeight.Bold)
+                    IconButton(onClick = { isAddingContact = true }) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Contact")
+                    }
+                }
+                
+                if (trustedContacts.isEmpty()) {
+                    Text("No contacts added", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                } else {
+                    LazyColumn(modifier = Modifier.heightIn(max = 150.dp)) {
+                        items(trustedContacts.toList()) { contact ->
+                            ListItem(
+                                headlineContent = { Text(contact) },
+                                trailingContent = {
+                                    TextButton(onClick = { removeContact(contact) }) {
+                                        Text("Remove", color = Color.Red)
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun EmergencyModal() {
+        Dialog(onDismissRequest = { /* Cannot dismiss */ }) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = RedEmergency)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        "EMERGENCY TRIGGERED",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp
+                    )
+                    Text(
+                        "Are you safe?",
+                        color = Color.White,
+                        fontSize = 18.sp
+                    )
+                    Text(
+                        "$countdownValue",
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 64.sp
+                    )
+                    Button(
+                        onClick = { 
+                            cancelEmergency()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("I AM SAFE (STOP)")
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun AddContactDialog() {
+        var phoneNumber by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { isAddingContact = false },
+            title = { Text("Add Trusted Contact") },
+            text = {
+                TextField(
+                    value = phoneNumber,
+                    onValueChange = { phoneNumber = it },
+                    label = { Text("Phone Number") }
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (phoneNumber.isNotEmpty()) {
+                        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
+                        val current = trustedContacts.toMutableSet()
+                        current.add(phoneNumber)
+                        trustedContacts = current
+                        prefs.edit().putStringSet("trusted_contacts", trustedContacts).apply()
+                        isAddingContact = false
+                    }
+                }) { Text("Add") }
+            },
+            dismissButton = {
+                TextButton(onClick = { isAddingContact = false }) { Text("Cancel") }
+            }
         )
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+    private fun handleToggleClick() {
+        if (isEmergencyMode) {
+            stopEmergency()
+            return
+        }
+
+        if (!isSafetyModeActive) {
+            if (checkPermissions()) {
                 startSafetyMode()
             } else {
-                Toast.makeText(this, "Permissions required for safety mode", Toast.LENGTH_LONG).show()
+                requestPermissions()
             }
+        } else {
+            stopSafetyMode()
         }
     }
 
     private fun startSafetyMode() {
         isSafetyModeActive = true
-        btnSafetyMode.text = getString(R.string.stop_safety)
-        btnSafetyMode.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.holo_red_dark)
-        tvAiStatus.text = getString(R.string.ai_detection_on)
-        tvGpsStatus.text = getString(R.string.gps_on)
+        aiStatus = "AI Detection: ON"
+        gpsStatus = "GPS: ON"
+        motionStatus = "Motion SOS: Active"
         
         val serviceIntent = Intent(this, AudioDetectionService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -205,54 +428,49 @@ class MainActivity : AppCompatActivity() {
         } else {
             startService(serviceIntent)
         }
-        
         Toast.makeText(this, "Safety Mode Started", Toast.LENGTH_SHORT).show()
     }
 
     private fun stopSafetyMode() {
         isSafetyModeActive = false
-        btnSafetyMode.text = getString(R.string.start_safety)
-        btnSafetyMode.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.holo_green_light)
-        tvAiStatus.text = getString(R.string.ai_detection_off)
-        tvGpsStatus.text = getString(R.string.gps_off)
+        aiStatus = "AI Detection: OFF"
+        gpsStatus = "GPS: OFF"
+        motionStatus = "Motion SOS: Inactive"
         
         val serviceIntent = Intent(this, AudioDetectionService::class.java)
         stopService(serviceIntent)
-        
         Toast.makeText(this, "Safety Mode Stopped", Toast.LENGTH_SHORT).show()
     }
 
-    private fun showCountdownDialog() {
-        if (isEmergencyMode) return
-        
-        val builder = androidx.appcompat.app.AlertDialog.Builder(this)
-        builder.setTitle(R.string.possible_emergency)
-        builder.setMessage("${getString(R.string.are_you_safe)}\nCountdown: 5")
-        builder.setCancelable(false)
-        
-        builder.setNegativeButton(R.string.cancel_countdown) { dialog, _ ->
-            countdownTimer?.cancel()
-            stopVibration()
-            dialog.dismiss()
-            Toast.makeText(this, "Emergency cancelled", Toast.LENGTH_SHORT).show()
-        }
-        
-        val dialog = builder.create()
-        dialog.show()
-        
-        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
-        if (prefs.getBoolean("emergency_vibration", true)) {
-            startVibration()
-        }
+    private fun activateEmergencyActions() {
+        isEmergencyMode = true
+        showEmergencyDialog = false
+        emergencyManager.activateEmergencyMode()
+        Toast.makeText(this, "EMERGENCY ACTIVATED", Toast.LENGTH_LONG).show()
+    }
 
-        countdownTimer = object : android.os.CountDownTimer(5000, 1000) {
+    private fun stopEmergency() {
+        isEmergencyMode = false
+        emergencyManager.stopEmergencyMode()
+        stopSafetyMode()
+    }
+
+    private fun cancelEmergency() {
+        countdownTimer?.cancel()
+        stopVibration()
+        showEmergencyDialog = false
+        Toast.makeText(this, "Emergency Cancelled", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun startCountdown() {
+        countdownValue = 5
+        startVibration()
+        countdownTimer = object : CountDownTimer(5000, 1000) {
             override fun onTick(millisUntilFinished: Long) {
-                dialog.setMessage("${getString(R.string.are_you_safe)}\nCountdown: ${millisUntilFinished / 1000}")
+                countdownValue = (millisUntilFinished / 1000).toInt()
             }
-            
             override fun onFinish() {
                 stopVibration()
-                dialog.dismiss()
                 activateEmergencyActions()
             }
         }.start()
@@ -286,69 +504,56 @@ class MainActivity : AppCompatActivity() {
         vibrator.cancel()
     }
 
-    private fun activateEmergencyActions() {
-        isEmergencyMode = true
-        Toast.makeText(this, "EMERGENCY MODE ACTIVATED", Toast.LENGTH_LONG).show()
-        emergencyManager.activateEmergencyMode()
-        
-        btnSafetyMode.text = "STOP EMERGENCY ALARM"
-        btnSafetyMode.backgroundTintList = ContextCompat.getColorStateList(this, android.R.color.holo_red_dark)
-    }
-
-    private fun showTrustedContactsDialog() {
-        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
-        val currentContacts = prefs.getStringSet("trusted_contacts", setOf())?.toMutableSet() ?: mutableSetOf()
-        
-        val contactList = currentContacts.toList().sorted()
-        val displayList = contactList.map { "$it (Tap to remove)" }.toTypedArray()
-
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Trusted Contacts")
-            .setItems(displayList) { _, which ->
-                val contactToRemove = contactList[which]
-                currentContacts.remove(contactToRemove)
-                prefs.edit().putStringSet("trusted_contacts", currentContacts).apply()
-                updateContactsUI()
-                Toast.makeText(this, "Removed $contactToRemove", Toast.LENGTH_SHORT).show()
-            }
-            .setPositiveButton("Add New") { _, _ ->
-                showAddContactDialog()
-            }
-            .setNegativeButton("Close", null)
-            .show()
-    }
-
-    private fun showAddContactDialog() {
-        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
-        val currentContacts = prefs.getStringSet("trusted_contacts", setOf())?.toMutableSet() ?: mutableSetOf()
-        
-        val input = android.widget.EditText(this)
-        input.inputType = android.text.InputType.TYPE_CLASS_PHONE
-        input.hint = "Enter phone number"
-
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Add Trusted Contact")
-            .setView(input)
-            .setPositiveButton("Add") { _, _ ->
-                val phone = input.text.toString()
-                if (phone.isNotEmpty()) {
-                    currentContacts.add(phone)
-                    prefs.edit().putStringSet("trusted_contacts", currentContacts).apply()
-                    updateContactsUI()
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-    
-    private fun updateContactsUI() {
-        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
-        val contacts = prefs.getStringSet("trusted_contacts", setOf()) ?: setOf()
-        
-        if (contacts.isEmpty()) {
-            tvEmergencyContact.text = getString(R.string.emergency_contact_none)
-        } else {
-            tvEmergencyContact.text = "Emergency Contacts: ${contacts.joinToString(", ")}"
+    private fun checkPermissions(): Boolean {
+        val permissions = mutableListOf(
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.SEND_SMS
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
+        return permissions.all {
+            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    private fun requestPermissions() {
+        val permissions = mutableListOf(
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.SEND_SMS
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        ActivityCompat.requestPermissions(this, permissions.toTypedArray(), 100)
+    }
+
+    private fun removeContact(contact: String) {
+        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
+        val current = trustedContacts.toMutableSet()
+        current.remove(contact)
+        trustedContacts = current
+        prefs.edit().putStringSet("trusted_contacts", trustedContacts).apply()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val filter = IntentFilter().apply {
+            addAction(AudioDetectionService.ACTION_AUDIO_UPDATE)
+            addAction(AudioDetectionService.ACTION_EMERGENCY_CONFIRM)
+            addAction(ACTION_EMERGENCY_STARTED)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(audioUpdateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(audioUpdateReceiver, filter)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver(audioUpdateReceiver)
     }
 }

@@ -2,63 +2,150 @@ package com.example.acousticguard
 
 import android.content.Context
 import android.os.Bundle
-import android.widget.Button
-import android.widget.CheckBox
-import android.widget.RadioButton
-import android.widget.RadioGroup
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.example.acousticguard.ui.theme.AcousticGuardTheme
 
-class SettingsActivity : AppCompatActivity() {
+class SettingsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_settings)
-
-        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
-
-        val rgTheme = findViewById<RadioGroup>(R.id.rgTheme)
-        val cbFlashlight = findViewById<CheckBox>(R.id.cbFlashlight)
-        val cbAlarm = findViewById<CheckBox>(R.id.cbAlarm)
-        val cbVibration = findViewById<CheckBox>(R.id.cbVibration)
-        val btnBack = findViewById<Button>(R.id.btnBack)
-
-        // Load saved settings
-        val themeMode = prefs.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
-        when (themeMode) {
-            AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM -> rgTheme.check(R.id.rbSystem)
-            AppCompatDelegate.MODE_NIGHT_NO -> rgTheme.check(R.id.rbLight)
-            AppCompatDelegate.MODE_NIGHT_YES -> rgTheme.check(R.id.rbDark)
-        }
-
-        cbFlashlight.isChecked = prefs.getBoolean("emergency_flashlight", true)
-        cbAlarm.isChecked = prefs.getBoolean("emergency_alarm", true)
-        cbVibration.isChecked = prefs.getBoolean("emergency_vibration", true)
-
-        rgTheme.setOnCheckedChangeListener { _, checkedId ->
-            val mode = when (checkedId) {
-                R.id.rbLight -> AppCompatDelegate.MODE_NIGHT_NO
-                R.id.rbDark -> AppCompatDelegate.MODE_NIGHT_YES
-                else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        
+        setContent {
+            AcousticGuardTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    SettingsScreen()
+                }
             }
-            prefs.edit().putInt("theme_mode", mode).apply()
-            AppCompatDelegate.setDefaultNightMode(mode)
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun SettingsScreen() {
+        val prefs = remember { getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE) }
+        
+        var themeMode by remember { 
+            mutableIntStateOf(prefs.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)) 
+        }
+        var emergencyFlashlight by remember { 
+            mutableStateOf(prefs.getBoolean("emergency_flashlight", true)) 
+        }
+        var emergencyAlarm by remember { 
+            mutableStateOf(prefs.getBoolean("emergency_alarm", true)) 
+        }
+        var emergencyVibration by remember { 
+            mutableStateOf(prefs.getBoolean("emergency_vibration", true)) 
         }
 
-        cbFlashlight.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit().putBoolean("emergency_flashlight", isChecked).apply()
-        }
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Settings", fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = { finish() }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                    }
+                )
+            }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("App Theme", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        ThemeOption("Follow System", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM, themeMode) {
+                            themeMode = it
+                            prefs.edit().putInt("theme_mode", it).apply()
+                            AppCompatDelegate.setDefaultNightMode(it)
+                        }
+                        ThemeOption("Light Mode", AppCompatDelegate.MODE_NIGHT_NO, themeMode) {
+                            themeMode = it
+                            prefs.edit().putInt("theme_mode", it).apply()
+                            AppCompatDelegate.setDefaultNightMode(it)
+                        }
+                        ThemeOption("Dark Mode", AppCompatDelegate.MODE_NIGHT_YES, themeMode) {
+                            themeMode = it
+                            prefs.edit().putInt("theme_mode", it).apply()
+                            AppCompatDelegate.setDefaultNightMode(it)
+                        }
+                    }
+                }
 
-        cbAlarm.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit().putBoolean("emergency_alarm", isChecked).apply()
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text("Emergency Features", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        ToggleOption("Flashing Flashlight", emergencyFlashlight) {
+                            emergencyFlashlight = it
+                            prefs.edit().putBoolean("emergency_flashlight", it).apply()
+                        }
+                        ToggleOption("Loud Alarm Sound", emergencyAlarm) {
+                            emergencyAlarm = it
+                            prefs.edit().putBoolean("emergency_alarm", it).apply()
+                        }
+                        ToggleOption("Vibration on Countdown", emergencyVibration) {
+                            emergencyVibration = it
+                            prefs.edit().putBoolean("emergency_vibration", it).apply()
+                        }
+                    }
+                }
+            }
         }
+    }
 
-        cbVibration.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit().putBoolean("emergency_vibration", isChecked).apply()
+    @Composable
+    fun ThemeOption(label: String, mode: Int, currentMode: Int, onSelect: (Int) -> Unit) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(selected = (mode == currentMode), onClick = { onSelect(mode) })
+            Text(label, modifier = Modifier.padding(start = 8.dp))
         }
+    }
 
-        btnBack.setOnClickListener {
-            finish()
+    @Composable
+    fun ToggleOption(label: String, checked: Boolean, onToggle: (Boolean) -> Unit) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(label)
+            Switch(checked = checked, onCheckedChange = onToggle)
         }
     }
 }

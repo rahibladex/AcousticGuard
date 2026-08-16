@@ -54,7 +54,15 @@ class EmergencyManager(private val context: Context) {
         stopFlashlight()
     }
 
-    private fun startAlarm() {
+    fun toggleAlarm() {
+        if (isAlarmActive) stopAlarm() else startAlarm()
+    }
+
+    fun toggleFlashlight() {
+        if (isFlashActive) stopFlashlight() else startFlashlight()
+    }
+
+    fun startAlarm() {
         if (isAlarmActive) return
         isAlarmActive = true
         
@@ -76,14 +84,14 @@ class EmergencyManager(private val context: Context) {
         }.start()
     }
 
-    private fun stopAlarm() {
+    fun stopAlarm() {
         isAlarmActive = false
         toneGen?.stopTone()
         toneGen?.release()
         toneGen = null
     }
 
-    private fun startFlashlight() {
+    fun startFlashlight() {
         if (isFlashActive) return
         isFlashActive = true
         val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
@@ -111,7 +119,7 @@ class EmergencyManager(private val context: Context) {
         }
     }
 
-    private fun stopFlashlight() {
+    fun stopFlashlight() {
         isFlashActive = false
     }
 
