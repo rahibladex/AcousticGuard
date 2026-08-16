@@ -5,8 +5,9 @@ AcousticGuard is an open-source Android application designed for personal safety
 ## Features
 
 - **AI Audio Detection**: Real-time monitoring of ambient sound levels and event classification.
+- **Adjustable Sensitivity**: Users can now set the detection threshold (dB) via a seeker bar to work in quieter or noisier environments.
 - **Safety Mode**: Activate monitoring with a single tap.
-- **Emergency Countdown**: A 5-second countdown allows users to cancel accidental triggers.
+- **Emergency Countdown**: A 5-second countdown with **tactile vibration feedback** allows users to feel the trigger even if the phone is in their pocket.
 - **Automated Alerts**:
   - CDMA-style emergency alarm.
   - Flashing flashlight for visual distress signaling.
