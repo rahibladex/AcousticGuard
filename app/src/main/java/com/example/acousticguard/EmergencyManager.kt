@@ -39,6 +39,11 @@ class EmergencyManager(private val context: Context) {
     private fun startAlarm() {
         if (isAlarmActive) return
         isAlarmActive = true
+        
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+        audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
+        
         toneGen = ToneGenerator(AudioManager.STREAM_ALARM, 100)
         
         Thread {

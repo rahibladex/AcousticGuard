@@ -9,7 +9,8 @@ AcousticGuard is an open-source Android application designed for personal safety
 - **Safety Mode**: Activate monitoring with a single tap.
 - **Emergency Countdown**: A 5-second countdown with **tactile vibration feedback** allows users to feel the trigger even if the phone is in their pocket.
 - **Automated Alerts**:
-  - CDMA-style emergency alarm.
+  - **High-Intensity Alarm**: Automatically forces system alarm volume to maximum for audible distress signaling.
+  - **Accurate Location Tracking**: Prioritizes fresh GPS fixes for high-accuracy location sharing.
   - Flashing flashlight for visual distress signaling.
   - Automatic SMS with real-time Google Maps location to trusted contacts.
 - **Trusted Contacts Management**: Easily add and manage phone numbers for emergency alerts.
