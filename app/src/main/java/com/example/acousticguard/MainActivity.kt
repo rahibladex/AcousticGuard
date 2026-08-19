@@ -270,17 +270,24 @@ class MainActivity : ComponentActivity() {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            val isAlarmActive = emergencyManager.isAlarmActive
             Button(
                 onClick = { 
                     emergencyManager.toggleAlarm()
                 },
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = RedEmergency),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isAlarmActive) Color.DarkGray else RedEmergency
+                ),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Icon(Icons.Default.Warning, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Alarm")
+                if (isAlarmActive) {
+                    Text("STOP ALARM")
+                } else {
+                    Icon(Icons.Default.Warning, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Alarm")
+                }
             }
             Button(
                 onClick = { 

@@ -11,11 +11,15 @@ import android.os.Handler
 import android.os.Looper
 import android.telephony.SmsManager
 import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 class EmergencyManager(private val context: Context) {
 
     private var toneGen: ToneGenerator? = null
-    private var isAlarmActive = false
+    var isAlarmActive by mutableStateOf(false)
+        private set
     private var isFlashActive = false
     private var mediaRecorder: MediaRecorder? = null
     

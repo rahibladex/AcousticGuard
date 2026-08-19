@@ -19,6 +19,10 @@
 
 # Local configuration
 local.properties
+github_token.txt
+.artifacts/
+.idea/planningMode.xml
+.idea/markdown.xml
 
 # Secrets
 *.jks
