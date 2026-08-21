@@ -22,10 +22,13 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.4
+
       - name: Build with Gradle
-        run: |
-          # Use a direct gradle command since wrapper is missing
-          gradle :app:assembleDebug --stacktrace
+        run: gradle :app:assembleDebug --stacktrace
 
       - name: Check APK existence
         run: find app/build/outputs/apk/ -name "*.apk"
