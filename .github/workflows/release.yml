@@ -30,14 +30,21 @@ jobs:
       - name: Build with Gradle
         run: gradle :app:assembleDebug --stacktrace
 
-      - name: Check APK existence
-        run: find app/build/outputs/apk/ -name "*.apk"
+      - name: Prepare APK for Upload
+        run: |
+          mkdir -p release_assets
+          cp app/build/outputs/apk/debug/*.apk release_assets/acousticguard.apk
 
       - name: Upload APK to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/debug/*.apk
+          files: release_assets/acousticguard.apk
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
+          body: |
+            ### AcousticGuard v2.0.2
+            - **Stop Alarm Option**: Silence the alarm easily.
+            - **Improved UI**: Better visual feedback.
+            - **Stability Fixes**: Optimized build process.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
