@@ -23,7 +23,10 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Build with Gradle
-        run: gradle assembleDebug
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: List Build Artifacts (Debug)
+        run: ls -R app/build/outputs/apk/
 
       - name: Upload APK to Release
         uses: softprops/action-gh-release@v2
