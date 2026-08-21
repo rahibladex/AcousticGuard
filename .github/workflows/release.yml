@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,18 +22,19 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-
       - name: Build with Gradle
-        run: gradle :app:assembleDebug --stacktrace
+        run: |
+          # Use a direct gradle command since wrapper is missing
+          gradle :app:assembleDebug --stacktrace
 
-      - name: List Build Artifacts (Debug)
-        run: ls -R app/build/outputs/apk/
+      - name: Check APK existence
+        run: find app/build/outputs/apk/ -name "*.apk"
 
       - name: Upload APK to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/debug/app-debug.apk
+          files: app/build/outputs/apk/debug/*.apk
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
