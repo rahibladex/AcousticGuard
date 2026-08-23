@@ -32,6 +32,11 @@ You can download the latest APK from the [Releases](https://github.com/rahiblade
 
 ## Version History
 
+### v3.0.0 (The Update Update)
+- **Automatic Updates**: Check for and install the latest app versions directly from the Settings menu.
+- **Improved Reliability**: Refined background service stability for long-term monitoring.
+- **Enhanced Security**: Integrated FileProvider for secure APK installations.
+
 ### v2.0.2 (Maintenance & UX)
 - **Stop Alarm Option**: Added a dedicated button to silence the high-intensity alarm once safety is confirmed, without terminating the entire emergency session.
 - **Improved UI States**: Clearer visual feedback when safety features are active.
