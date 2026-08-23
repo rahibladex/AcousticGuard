@@ -56,8 +56,8 @@ dependencies {
     // Lottie for smooth animations
     implementation("com.airbnb.android:lottie:6.3.0")
     
-    // Glide for image processing (if needed for glassmorphism)
-    implementation("github.com/bumptech/glide:glide:4.16.0")
+    // Glide for image processing
+    implementation("com.github.bumptech.glide:glide:4.16.0")
     
     // TensorFlow Lite
     implementation("org.tensorflow:tensorflow-lite:2.14.0")
