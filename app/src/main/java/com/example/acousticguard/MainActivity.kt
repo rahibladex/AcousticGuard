@@ -17,25 +17,29 @@ import android.os.VibratorManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.background
+import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -43,10 +47,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.example.acousticguard.ui.theme.AcousticGuardTheme
-import com.example.acousticguard.ui.theme.BlueProtection
-import com.example.acousticguard.ui.theme.GreenActive
-import com.example.acousticguard.ui.theme.RedEmergency
+import com.example.acousticguard.ui.theme.*
 
 class MainActivity : ComponentActivity() {
 
@@ -122,38 +123,64 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun MainScreenContent() {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("ACOUSTIC GUARD", fontWeight = FontWeight.Bold) },
-                    actions = {
-                        IconButton(onClick = { 
-                            startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
-                        }) {
-                            Icon(Icons.Default.Settings, contentDescription = "Settings")
-                        }
-                    }
-                )
-            }
-        ) { padding ->
-            Column(
+        val backgroundColor by animateColorAsState(
+            targetValue = when {
+                isEmergencyMode -> RedEmergency.copy(alpha = 0.8f)
+                isSafetyModeActive -> BlueProtection.copy(alpha = 0.8f)
+                else -> DarkBg
+            },
+            animationSpec = tween(1000), label = "bgColor"
+        )
+
+        Box(modifier = Modifier.fillMaxSize().background(backgroundColor)) {
+            // Subtle animated background pattern
+            Box(
                 modifier = Modifier
-                    .padding(padding)
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(24.dp)
-            ) {
-                MainToggleButton()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f))
+                        )
+                    )
+            )
 
-                StatusDashboard()
+            Scaffold(
+                containerColor = Color.Transparent,
+                topBar = {
+                    CenterAlignedTopAppBar(
+                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
+                        title = { Text("ACOUSTIC GUARD", fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp, color = Color.White) },
+                        actions = {
+                            IconButton(onClick = { 
+                                startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
+                            }) {
+                                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
+                            }
+                        }
+                    )
+                }
+            ) { padding ->
+                Column(
+                    modifier = Modifier
+                        .padding(padding)
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(28.dp)
+                ) {
+                    Spacer(modifier = Modifier.height(20.dp))
+                    
+                    MainToggleButton()
 
-                QuickActions()
+                    StatusDashboard()
 
-                SafetyToolsSection()
+                    QuickActions()
 
-                ContactsSection()
+                    SafetyToolsSection()
+
+                    ContactsSection()
+                }
             }
         }
 
@@ -168,26 +195,33 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun MainToggleButton() {
-        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+        val haptic = LocalHapticFeedback.current
+        val interactionSource = remember { MutableInteractionSource() }
+        val isPressed by interactionSource.collectIsPressedAsState()
         
-        val alpha by infiniteTransition.animateFloat(
-            initialValue = 0.2f,
-            targetValue = if (isSafetyModeActive || isEmergencyMode) 0.6f else 0.2f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1000, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "alpha"
+        val scale by animateFloatAsState(
+            targetValue = if (isPressed) 0.9f else 1f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy), label = "scale"
         )
 
-        val scale by infiniteTransition.animateFloat(
+        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+        val pulseScale by infiniteTransition.animateFloat(
             initialValue = 1f,
-            targetValue = if (isSafetyModeActive || isEmergencyMode) 1.15f else 1f,
+            targetValue = if (isSafetyModeActive || isEmergencyMode) 1.3f else 1f,
             animationSpec = infiniteRepeatable(
-                animation = tween(1000, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse
+                animation = tween(1500, easing = LinearOutSlowInEasing),
+                repeatMode = RepeatMode.Restart
             ),
-            label = "scale"
+            label = "pulse"
+        )
+        val pulseAlpha by infiniteTransition.animateFloat(
+            initialValue = 0.5f,
+            targetValue = 0f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1500, easing = LinearOutSlowInEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "alpha"
         )
 
         val buttonColor = when {
@@ -196,70 +230,90 @@ class MainActivity : ComponentActivity() {
             else -> GreenActive
         }
 
-        val buttonText = when {
-            isEmergencyMode -> "STOP\nEMERGENCY"
-            isSafetyModeActive -> "PROTECTION\nACTIVE"
-            else -> "START\nPROTECTION"
-        }
-
-        Box(
-            modifier = Modifier
-                .size(220.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            // Pulsing Glow
-            Box(
-                modifier = Modifier
-                    .size(200.dp)
-                    .then(if (isSafetyModeActive || isEmergencyMode) Modifier.size((200 * scale).dp) else Modifier)
-                    .clip(CircleShape)
-                    .background(buttonColor.copy(alpha = if (isSafetyModeActive || isEmergencyMode) alpha else 0.1f))
-            )
-            
-            Button(
-                onClick = { handleToggleClick() },
-                modifier = Modifier
-                    .size(160.dp),
-                shape = CircleShape,
-                colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp, pressedElevation = 12.dp)
-            ) {
-                Text(
-                    text = buttonText,
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 18.sp,
-                    lineHeight = 22.sp
+        Box(contentAlignment = Alignment.Center) {
+            // Animated Pulse Halo
+            if (isSafetyModeActive || isEmergencyMode) {
+                Box(
+                    modifier = Modifier
+                        .size(180.dp)
+                        .graphicsLayer(scaleX = pulseScale, scaleY = pulseScale)
+                        .clip(CircleShape)
+                        .background(buttonColor.copy(alpha = pulseAlpha))
                 )
+            }
+
+            Surface(
+                onClick = { 
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    handleToggleClick() 
+                },
+                modifier = Modifier
+                    .size(160.dp)
+                    .graphicsLayer(scaleX = scale, scaleY = scale),
+                shape = CircleShape,
+                color = buttonColor,
+                tonalElevation = 8.dp,
+                shadowElevation = 12.dp,
+                interactionSource = interactionSource
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = if (isEmergencyMode) R.drawable.ic_warning else R.drawable.ic_shield),
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = Color.White
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = when {
+                            isEmergencyMode -> "STOP"
+                            isSafetyModeActive -> "ACTIVE"
+                            else -> "START"
+                        },
+                        fontWeight = FontWeight.Black,
+                        fontSize = 20.sp,
+                        color = Color.White
+                    )
+                }
             }
         }
     }
 
     @Composable
     fun StatusDashboard() {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatusCard(modifier = Modifier.weight(1f), title = "AI Audio", status = aiStatus, active = isSafetyModeActive)
-                StatusCard(modifier = Modifier.weight(1f), title = "Motion SOS", status = motionStatus, active = isSafetyModeActive)
+                StatusCard(modifier = Modifier.weight(1f), title = "AI Audio", status = aiStatus, icon = Icons.Default.Mic)
+                StatusCard(modifier = Modifier.weight(1f), title = "Motion SOS", status = motionStatus, icon = Icons.Default.DirectionsRun)
             }
-            StatusCard(modifier = Modifier.fillMaxWidth(), title = "GPS Status", status = gpsStatus, active = isSafetyModeActive)
+            StatusCard(modifier = Modifier.fillMaxWidth(), title = "Location Accuracy", status = gpsStatus, icon = Icons.Default.LocationOn)
         }
     }
 
     @Composable
-    fun StatusCard(modifier: Modifier, title: String, status: String, active: Boolean) {
-        Card(
+    fun StatusCard(modifier: Modifier, title: String, status: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
+        Surface(
             modifier = modifier,
-            colors = CardDefaults.cardColors(
-                containerColor = if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-            )
+            shape = RoundedCornerShape(20.dp),
+            color = GlassWhite,
+            border = BorderStroke(1.dp, GlassBorder)
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(text = title, style = MaterialTheme.typography.labelMedium)
-                Text(text = status, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(icon, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(text = title, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+                    Text(text = status, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Color.White)
+                }
             }
         }
     }
@@ -271,66 +325,128 @@ class MainActivity : ComponentActivity() {
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             val isAlarmActive = emergencyManager.isAlarmActive
-            Button(
-                onClick = { 
-                    emergencyManager.toggleAlarm()
-                },
+            ActionBtn(
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isAlarmActive) Color.DarkGray else RedEmergency
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                if (isAlarmActive) {
-                    Text("STOP ALARM")
-                } else {
-                    Icon(Icons.Default.Warning, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Alarm")
-                }
-            }
-            Button(
-                onClick = { 
-                    emergencyManager.toggleFlashlight()
-                },
+                text = if (isAlarmActive) "STOP ALARM" else "ALARM",
+                icon = Icons.Default.NotificationsActive,
+                color = if (isAlarmActive) Color.DarkGray else RedEmergency,
+                onClick = { emergencyManager.toggleAlarm() }
+            )
+            ActionBtn(
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("Toggle Light")
-            }
+                text = "LIGHT",
+                icon = painterResource(id = R.drawable.ic_flashlight),
+                color = Color(0xFF5856D6),
+                onClick = { emergencyManager.toggleFlashlight() }
+            )
+        }
+    }
+
+    @Composable
+    fun ActionBtn(modifier: Modifier, text: String, icon: androidx.compose.ui.graphics.painter.Painter, color: Color, onClick: () -> Unit) {
+        Button(
+            onClick = onClick,
+            modifier = modifier.height(60.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = color),
+            shape = RoundedCornerShape(16.dp),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         }
     }
 
     @Composable
     fun SafetyToolsSection() {
-        Card(
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(24.dp),
+            color = GlassWhite,
+            border = BorderStroke(1.dp, GlassBorder)
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Safety Tools", fontWeight = FontWeight.Bold)
+            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Handyman, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text("Safety Tools", fontWeight = FontWeight.Bold, color = Color.White)
+                }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Button(
-                        onClick = { 
-                            if (isSafeWalkActive) stopSafeWalkTimer() else startSafeWalkTimer()
-                        },
+                    ToolBtn(
+                        modifier = Modifier.weight(1.2f),
+                        text = if (isSafeWalkActive) "Stop $safeWalkRemainingTime" else "Safe Walk",
+                        icon = Icons.Default.Timer,
+                        active = isSafeWalkActive,
+                        onClick = { if (isSafeWalkActive) stopSafeWalkTimer() else startSafeWalkTimer() }
+                    )
+                    ToolBtn(
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isSafeWalkActive) Color.Red else MaterialTheme.colorScheme.tertiary
-                        )
-                    ) {
-                        Text(if (isSafeWalkActive) "Stop Timer ($safeWalkRemainingTime)" else "Safe Walk Timer")
+                        text = "Fake Call",
+                        icon = Icons.Default.AddIcCall,
+                        active = false,
+                        onClick = { triggerFakeCall() }
+                    )
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun ToolBtn(modifier: Modifier, text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, active: Boolean, onClick: () -> Unit) {
+        val haptic = LocalHapticFeedback.current
+        Button(
+            onClick = { 
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick() 
+            },
+            modifier = modifier.height(54.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (active) RedEmergency else Color.White.copy(alpha = 0.15f),
+                contentColor = Color.White
+            ),
+            shape = RoundedCornerShape(14.dp)
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(text, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        }
+    }
+
+    @Composable
+    fun ContactsSection() {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            color = GlassWhite,
+            border = BorderStroke(1.dp, GlassBorder)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.ShieldMoon, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Text("Trusted Contacts", fontWeight = FontWeight.Bold, color = Color.White)
                     }
-                    Button(
-                        onClick = { triggerFakeCall() },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                    ) {
-                        Text("Fake Call")
+                    IconButton(onClick = { isAddingContact = true }) {
+                        Icon(Icons.Default.AddCircle, contentDescription = "Add", tint = GreenActive)
+                    }
+                }
+                
+                if (trustedContacts.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp), contentAlignment = Alignment.Center) {
+                        Text("No contacts secured yet", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.4f))
+                    }
+                } else {
+                    Spacer(Modifier.height(10.dp))
+                    trustedContacts.toList().forEach { contact ->
+                        ContactItem(contact) { removeContact(contact) }
                     }
                 }
             }
@@ -338,39 +454,26 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun ContactsSection() {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp)
+    fun ContactItem(contact: String, onRemove: () -> Unit) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color.White.copy(alpha = 0.05f))
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Trusted Contacts", fontWeight = FontWeight.Bold)
-                    IconButton(onClick = { isAddingContact = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Contact")
-                    }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(32.dp).clip(CircleShape).background(BlueProtection.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
+                    Text(contact.take(1), color = BlueProtection, fontWeight = FontWeight.Bold)
                 }
-                
-                if (trustedContacts.isEmpty()) {
-                    Text("No contacts added", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-                } else {
-                    LazyColumn(modifier = Modifier.heightIn(max = 150.dp)) {
-                        items(trustedContacts.toList()) { contact ->
-                            ListItem(
-                                headlineContent = { Text(contact) },
-                                trailingContent = {
-                                    TextButton(onClick = { removeContact(contact) }) {
-                                        Text("Remove", color = Color.Red)
-                                    }
-                                }
-                            )
-                        }
-                    }
-                }
+                Spacer(Modifier.width(12.dp))
+                Text(contact, color = Color.White, fontWeight = FontWeight.Medium)
+            }
+            IconButton(onClick = onRemove, modifier = Modifier.size(24.dp)) {
+                Icon(Icons.Default.RemoveCircleOutline, contentDescription = null, tint = RedEmergency.copy(alpha = 0.7f))
             }
         }
     }
@@ -378,43 +481,59 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun EmergencyModal() {
         Dialog(onDismissRequest = { /* Cannot dismiss */ }) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = RedEmergency)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(32.dp),
+                color = RedEmergency,
+                shadowElevation = 24.dp
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp),
+                    modifier = Modifier.padding(32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    Text(
-                        "EMERGENCY TRIGGERED",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp
+                    val infiniteTransition = rememberInfiniteTransition(label = "modalPulse")
+                    val scale by infiniteTransition.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.2f,
+                        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse), label = "scale"
                     )
-                    Text(
-                        "Are you safe?",
-                        color = Color.White,
-                        fontSize = 18.sp
+
+                    Icon(
+                        Icons.Default.ReportProblem, 
+                        contentDescription = null, 
+                        modifier = Modifier.size(80.dp).graphicsLayer(scaleX = scale, scaleY = scale),
+                        tint = Color.White
                     )
+                    
+                    Text(
+                        "EMERGENCY ACTIVE",
+                        color = Color.White,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 26.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    
+                    Text(
+                        "Protocol starts in",
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 16.sp
+                    )
+                    
                     Text(
                         "$countdownValue",
                         color = Color.White,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 64.sp
+                        fontWeight = FontWeight.Black,
+                        fontSize = 80.sp
                     )
+                    
                     Button(
-                        onClick = { 
-                            cancelEmergency()
-                        },
+                        onClick = { cancelEmergency() },
                         colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().height(60.dp),
+                        shape = RoundedCornerShape(20.dp)
                     ) {
-                        Text("I AM SAFE (STOP)")
+                        Text("I AM SAFE", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     }
                 }
             }
