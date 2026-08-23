@@ -39,12 +39,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: release_assets/acousticguard.apk
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          body: |
-            ### AcousticGuard v2.0.2
-            - **Stop Alarm Option**: Silence the alarm easily.
-            - **Improved UI**: Better visual feedback.
-            - **Stability Fixes**: Optimized build process.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
