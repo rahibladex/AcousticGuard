@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.acousticguard.ui.theme.AcousticGuardTheme
@@ -140,6 +141,55 @@ class SettingsActivity : ComponentActivity() {
                         ToggleOption("Low Battery Alert", lowBatteryAlert) {
                             lowBatteryAlert = it
                             prefs.edit().putBoolean("low_battery_alert", it).apply()
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text("Updates & Info", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    val updateManager = remember { UpdateManager(this@SettingsActivity) }
+                    var updateStatus by remember { mutableStateOf("Version: ${packageManager.getPackageInfo(packageName, 0).versionName}") }
+                    var isChecking by remember { mutableStateOf(false) }
+
+                    Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(updateStatus, style = MaterialTheme.typography.bodyMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                isChecking = true
+                                updateStatus = "Checking for updates..."
+                                updateManager.checkForUpdates(
+                                    onUpdateAvailable = { version, url ->
+                                        isChecking = false
+                                        updateStatus = "Update available: v$version"
+                                        updateManager.downloadAndInstall(url)
+                                    },
+                                    onNoUpdate = {
+                                        isChecking = false
+                                        updateStatus = "App is up to date"
+                                    },
+                                    onError = { error ->
+                                        isChecking = false
+                                        updateStatus = "Error: $error"
+                                    }
+                                )
+                            },
+                            enabled = !isChecking,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (isChecking) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Checking...")
+                            } else {
+                                Text("Check for Updates")
+                            }
                         }
                     }
                 }
