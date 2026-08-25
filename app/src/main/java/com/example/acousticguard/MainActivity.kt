@@ -40,7 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -197,7 +197,7 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun MainToggleButton() {
-        val haptic = androidx.compose.ui.platform.androidx.compose.ui.platform.LocalHapticFeedback.current
+        val haptic = LocalHapticFeedback.current
         val interactionSource = remember { MutableInteractionSource() }
         val isPressed by interactionSource.collectIsPressedAsState()
         
@@ -398,7 +398,7 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun ToolBtn(modifier: Modifier, text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, active: Boolean, onClick: () -> Unit) {
-        val haptic = androidx.compose.ui.platform.androidx.compose.ui.platform.LocalHapticFeedback.current
+        val haptic = LocalHapticFeedback.current
         Button(
             onClick = { 
                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
