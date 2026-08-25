@@ -38,7 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
@@ -64,7 +64,7 @@ class MainActivity : ComponentActivity() {
     private var isSafetyModeActive by mutableStateOf(false)
     private var isEmergencyMode by mutableStateOf(false)
     private var aiStatus by mutableStateOf("AI Detection: OFF")
-    private var gpsStatus by mutableStateOf("GPS: OFF")
+    private var gpsStatus by mutableStateOf("GPS : OFF")
     private var motionStatus by mutableStateOf("Motion SOS: Inactive")
     private var showEmergencyDialog by mutableStateOf(false)
     private var countdownValue by mutableStateOf(5)
@@ -82,9 +82,9 @@ class MainActivity : ComponentActivity() {
                     val db = intent.getDoubleExtra(AudioDetectionService.EXTRA_LOUDNESS, 0.0)
                     val event = intent.getStringExtra(AudioDetectionService.EXTRA_EVENT)
                     aiStatus = if (event.isNullOrEmpty()) {
-                        "AI Detection: ON (Vol: ${String.format("%.1f", db)} dB)"
+                        "AI Detection:\nON"
                     } else {
-                        "AI Detection: ON (${String.format("%.1f", db)} dB) - $event"
+                        "AI Detection:\nON ($event)"
                     }
                 }
                 AudioDetectionService.ACTION_EMERGENCY_CONFIRM -> {
@@ -109,7 +109,7 @@ class MainActivity : ComponentActivity() {
             NariShaktiSOSTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    color = Color(0xFF121212)
                 ) {
                     MainScreenContent()
                 }
@@ -125,63 +125,64 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun MainScreenContent() {
-        val backgroundColor by animateColorAsState(
-            targetValue = when {
-                isEmergencyMode -> RedEmergency.copy(alpha = 0.8f)
-                isSafetyModeActive -> BlueProtection.copy(alpha = 0.8f)
-                else -> DarkBg
-            },
-            animationSpec = tween(1000), label = "bgColor"
-        )
-
-        Box(modifier = Modifier.fillMaxSize().background(backgroundColor)) {
-            // Subtle animated background pattern
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f))
-                        )
-                    )
-            )
-
-            Scaffold(
-                containerColor = Color.Transparent,
-                topBar = {
-                    CenterAlignedTopAppBar(
-                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
-                        title = { Text("NARISHAKTI SOS", fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp, color = Color.White) },
-                        actions = {
-                            IconButton(onClick = { 
-                                startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
-                            }) {
-                                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
-                            }
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                CenterAlignedTopAppBar(
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
+                    title = { Text("NariShakti SOS", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color.White) },
+                    actions = {
+                        IconButton(onClick = { 
+                            startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
+                        }) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
                         }
-                    )
+                    }
+                )
+            }
+        ) { padding ->
+            LazyColumn(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                item {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    HeroSection()
                 }
-            ) { padding ->
-                Column(
-                    modifier = Modifier
-                        .padding(padding)
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(28.dp)
-                ) {
-                    Spacer(modifier = Modifier.height(20.dp))
+
+                item {
+                    StartTrackingButton()
+                }
+
+                item {
+                    StatusRow()
+                }
+
+                item {
+                    SectionHeader("TRUSTED CONTACTS")
+                    AddContactButton()
                     
-                    MainToggleButton()
+                    if (trustedContacts.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        trustedContacts.forEach { contact ->
+                            ContactItem(contact) { removeContact(contact) }
+                        }
+                    }
+                }
 
-                    StatusDashboard()
+                item {
+                    SectionHeader("LOCATION")
+                    LocationCard()
+                }
 
-                    QuickActions()
-
-                    SafetyToolsSection()
-
-                    ContactsSection()
+                item {
+                    SectionHeader("SAFETY TOOLS")
+                    SafetyToolsRow()
+                    Spacer(modifier = Modifier.height(20.dp))
                 }
             }
         }
@@ -196,261 +197,203 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun MainToggleButton() {
+    fun HeroSection() {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Apki Suraksha,\nHar kadam,\nHar pal....",
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                lineHeight = 32.sp,
+                modifier = Modifier.weight(1f)
+            )
+            
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape)
+                        .background(Color.LightGray.copy(alpha = 0.8f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_shield),
+                        contentDescription = null,
+                        modifier = Modifier.size(50.dp),
+                        tint = Color(0xFF121212)
+                    )
+                }
+                Text(
+                    text = "Nari Shakti",
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
+    }
+
+    @Composable
+    fun StartTrackingButton() {
         val haptic = LocalHapticFeedback.current
         val interactionSource = remember { MutableInteractionSource() }
         val isPressed by interactionSource.collectIsPressedAsState()
-        
-        val scale by animateFloatAsState(
-            targetValue = if (isPressed) 0.9f else 1f,
-            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy), label = "scale"
-        )
+        val scale by animateFloatAsState(if (isPressed) 0.95f else 1f, label = "scale")
 
-        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-        val pulseScale by infiniteTransition.animateFloat(
-            initialValue = 1f,
-            targetValue = if (isSafetyModeActive || isEmergencyMode) 1.3f else 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1500, easing = LinearOutSlowInEasing),
-                repeatMode = RepeatMode.Restart
-            ),
-            label = "pulse"
-        )
-        val pulseAlpha by infiniteTransition.animateFloat(
-            initialValue = 0.5f,
-            targetValue = 0f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1500, easing = LinearOutSlowInEasing),
-                repeatMode = RepeatMode.Restart
-            ),
-            label = "alpha"
-        )
-
-        val buttonColor = when {
-            isEmergencyMode -> RedEmergency
-            isSafetyModeActive -> BlueProtection
-            else -> GreenActive
-        }
-
-        Box(contentAlignment = Alignment.Center) {
-            // Animated Pulse Halo
-            if (isSafetyModeActive || isEmergencyMode) {
-                Box(
-                    modifier = Modifier
-                        .size(180.dp)
-                        .graphicsLayer(scaleX = pulseScale, scaleY = pulseScale)
-                        .clip(CircleShape)
-                        .background(buttonColor.copy(alpha = pulseAlpha))
-                )
-            }
-
-            Surface(
-                onClick = { 
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(110.dp)
+                .graphicsLayer(scaleX = scale, scaleY = scale)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Brush.horizontalGradient(listOf(DeepBlueStart, DeepBlueEnd)))
+                .clickable(interactionSource = interactionSource, indication = null) {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    handleToggleClick() 
+                    handleToggleClick()
                 },
-                modifier = Modifier
-                    .size(160.dp)
-                    .graphicsLayer(scaleX = scale, scaleY = scale),
-                shape = CircleShape,
-                color = buttonColor,
-                tonalElevation = 8.dp,
-                shadowElevation = 12.dp,
-                interactionSource = interactionSource
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = if (isEmergencyMode) R.drawable.ic_warning else R.drawable.ic_shield),
-                        contentDescription = null,
-                        modifier = Modifier.size(40.dp),
-                        tint = Color.White
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = when {
-                            isEmergencyMode -> "STOP"
-                            isSafetyModeActive -> "ACTIVE"
-                            else -> "START"
-                        },
-                        fontWeight = FontWeight.Black,
-                        fontSize = 20.sp,
-                        color = Color.White
-                    )
-                }
-            }
-        }
-    }
-
-    @Composable
-    fun StatusDashboard() {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                StatusCard(modifier = Modifier.weight(1f), title = "AI Audio", status = aiStatus, icon = Icons.Default.Mic)
-                StatusCard(modifier = Modifier.weight(1f), title = "Motion SOS", status = motionStatus, icon = Icons.Default.DirectionsRun)
-            }
-            StatusCard(modifier = Modifier.fillMaxWidth(), title = "Location Accuracy", status = gpsStatus, icon = Icons.Default.LocationOn)
-        }
-    }
-
-    @Composable
-    fun StatusCard(modifier: Modifier, title: String, status: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
-        Surface(
-            modifier = modifier,
-            shape = RoundedCornerShape(20.dp),
-            color = GlassWhite,
-            border = BorderStroke(1.dp, GlassBorder)
+            contentAlignment = Alignment.Center
         ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(icon, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text(text = title, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
-                    Text(text = status, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Color.White)
-                }
-            }
+            Text(
+                text = if (isEmergencyMode) "STOP EMERGENCY" else if (isSafetyModeActive) "STOP TRACKING" else "START TRACKING",
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 1.sp
+            )
         }
     }
 
     @Composable
-    fun QuickActions() {
+    fun StatusRow() {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            val isAlarmActive = emergencyManager.isAlarmActive
-            ActionBtn(
+            StatusCard(
                 modifier = Modifier.weight(1f),
-                text = if (isAlarmActive) "STOP ALARM" else "ALARM",
-                icon = rememberVectorPainter(Icons.Default.NotificationsActive),
-                color = if (isAlarmActive) Color.DarkGray else RedEmergency,
-                onClick = { emergencyManager.toggleAlarm() }
+                title = "AI AUDIO",
+                status = aiStatus,
+                icon = Icons.Default.Mic
             )
-            ActionBtn(
+            StatusCard(
                 modifier = Modifier.weight(1f),
-                text = "LIGHT",
-                icon = painterResource(id = R.drawable.ic_flashlight),
-                color = Color(0xFF5856D6),
-                onClick = { emergencyManager.toggleFlashlight() }
+                title = "MOTION SOS",
+                status = motionStatus,
+                icon = Icons.Default.DirectionsRun
             )
         }
     }
 
     @Composable
-    fun ActionBtn(modifier: Modifier, text: String, icon: androidx.compose.ui.graphics.painter.Painter, color: Color, onClick: () -> Unit) {
-        Button(
-            onClick = onClick,
-            modifier = modifier.height(60.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = color),
-            shape = RoundedCornerShape(16.dp),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+    fun StatusCard(modifier: Modifier, title: String, status: String, icon: ImageVector) {
+        Box(
+            modifier = modifier
+                .height(85.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Brush.horizontalGradient(listOf(DeepBlueStart, DeepBlueEnd)))
+                .padding(12.dp)
         ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        }
-    }
-
-    @Composable
-    fun SafetyToolsSection() {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            color = GlassWhite,
-            border = BorderStroke(1.dp, GlassBorder)
-        ) {
-            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Handyman, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(12.dp))
-                    Text("Safety Tools", fontWeight = FontWeight.Bold, color = Color.White)
+                    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(title, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    ToolBtn(
-                        modifier = Modifier.weight(1.2f),
-                        text = if (isSafeWalkActive) "Stop $safeWalkRemainingTime" else "Safe Walk",
-                        icon = Icons.Default.Timer,
-                        active = isSafeWalkActive,
-                        onClick = { if (isSafeWalkActive) stopSafeWalkTimer() else startSafeWalkTimer() }
-                    )
-                    ToolBtn(
-                        modifier = Modifier.weight(1f),
-                        text = "Fake Call",
-                        icon = Icons.Default.AddIcCall,
-                        active = false,
-                        onClick = { triggerFakeCall() }
-                    )
+                Spacer(Modifier.height(4.dp))
+                Text(status, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, lineHeight = 18.sp)
+            }
+        }
+    }
+
+    @Composable
+    fun SectionHeader(title: String) {
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+    }
+
+    @Composable
+    fun AddContactButton() {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(Brush.horizontalGradient(listOf(DeepBlueStart, DeepBlueEnd)))
+                .clickable { isAddingContact = true },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White, modifier = Modifier.size(30.dp))
+        }
+    }
+
+    @Composable
+    fun LocationCard() {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Brush.horizontalGradient(listOf(DeepBlueStart, DeepBlueEnd)))
+                .padding(20.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp))
+                Spacer(Modifier.width(16.dp))
+                Column {
+                    Text("Location Accuracy", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(gpsStatus, color = Color.White, fontSize = 16.sp)
                 }
             }
         }
     }
 
     @Composable
-    fun ToolBtn(modifier: Modifier, text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, active: Boolean, onClick: () -> Unit) {
-        val haptic = LocalHapticFeedback.current
-        Button(
-            onClick = { 
-                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                onClick() 
-            },
-            modifier = modifier.height(54.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (active) RedEmergency else Color.White.copy(alpha = 0.15f),
-                contentColor = Color.White
-            ),
-            shape = RoundedCornerShape(14.dp)
+    fun SafetyToolsRow() {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(text, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            ToolButton(
+                modifier = Modifier.weight(1f),
+                text = if (isSafeWalkActive) safeWalkRemainingTime else "Safe Walk",
+                icon = Icons.Default.Timer,
+                onClick = { if (isSafeWalkActive) stopSafeWalkTimer() else startSafeWalkTimer() }
+            )
+            ToolButton(
+                modifier = Modifier.weight(1f),
+                text = "Fake Call",
+                icon = Icons.Default.AddIcCall,
+                onClick = { triggerFakeCall() }
+            )
         }
     }
 
     @Composable
-    fun ContactsSection() {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            color = GlassWhite,
-            border = BorderStroke(1.dp, GlassBorder)
+    fun ToolButton(modifier: Modifier, text: String, icon: ImageVector, onClick: () -> Unit) {
+        Box(
+            modifier = modifier
+                .height(60.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Brush.horizontalGradient(listOf(DeepBlueStart, DeepBlueEnd)))
+                .clickable { onClick() }
+                .padding(horizontal = 12.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.ShieldMoon, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(12.dp))
-                        Text("Trusted Contacts", fontWeight = FontWeight.Bold, color = Color.White)
-                    }
-                    IconButton(onClick = { isAddingContact = true }) {
-                        Icon(androidx.compose.material.icons.Icons.Default.AddCircle, contentDescription = "Add", tint = GreenActive)
-                    }
-                }
-                
-                if (trustedContacts.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp), contentAlignment = Alignment.Center) {
-                        Text("No contacts secured yet", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.4f))
-                    }
-                } else {
-                    Spacer(Modifier.height(10.dp))
-                    trustedContacts.toList().forEach { contact ->
-                        ContactItem(contact) { removeContact(contact) }
-                    }
-                }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(text, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -460,22 +403,16 @@ class MainActivity : ComponentActivity() {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp)
+                .padding(vertical = 4.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color.White.copy(alpha = 0.05f))
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .background(Color.White.copy(alpha = 0.1f))
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(32.dp).clip(CircleShape).background(BlueProtection.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
-                    Text(contact.take(1), color = BlueProtection, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.width(12.dp))
-                Text(contact, color = Color.White, fontWeight = FontWeight.Medium)
-            }
+            Text(contact, color = Color.White, fontWeight = FontWeight.Medium)
             IconButton(onClick = onRemove, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Default.RemoveCircleOutline, contentDescription = null, tint = RedEmergency.copy(alpha = 0.7f))
+                Icon(Icons.Default.RemoveCircleOutline, contentDescription = null, tint = RedEmergency.copy(alpha = 0.8f))
             }
         }
     }
@@ -552,13 +489,14 @@ class MainActivity : ComponentActivity() {
                 TextField(
                     value = phoneNumber,
                     onValueChange = { phoneNumber = it },
-                    label = { Text("Phone Number") }
+                    label = { Text("Phone Number") },
+                    modifier = Modifier.fillMaxWidth()
                 )
             },
             confirmButton = {
                 Button(onClick = {
                     if (phoneNumber.isNotEmpty()) {
-                        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
+                        val prefs = getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
                         val current = trustedContacts.toMutableSet()
                         current.add(phoneNumber)
                         trustedContacts = current
@@ -592,9 +530,9 @@ class MainActivity : ComponentActivity() {
 
     private fun startSafetyMode() {
         isSafetyModeActive = true
-        aiStatus = "AI Detection: ON"
-        gpsStatus = "GPS: ON"
-        motionStatus = "Motion SOS: Active"
+        aiStatus = "AI Detection:\nON"
+        gpsStatus = "GPS : ON"
+        motionStatus = "Motion SOS:\nActive"
         
         val serviceIntent = Intent(this, AudioDetectionService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -607,9 +545,9 @@ class MainActivity : ComponentActivity() {
 
     private fun stopSafetyMode() {
         isSafetyModeActive = false
-        aiStatus = "AI Detection: OFF"
-        gpsStatus = "GPS: OFF"
-        motionStatus = "Motion SOS: Inactive"
+        aiStatus = "AI Detection:\nOFF"
+        gpsStatus = "GPS : OFF"
+        motionStatus = "Motion SOS:\nInactive"
         
         val serviceIntent = Intent(this, AudioDetectionService::class.java)
         stopService(serviceIntent)
@@ -705,7 +643,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun removeContact(contact: String) {
-        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
         val current = trustedContacts.toMutableSet()
         current.remove(contact)
         trustedContacts = current
@@ -760,4 +698,3 @@ class MainActivity : ComponentActivity() {
         unregisterReceiver(audioUpdateReceiver)
     }
 }
-
