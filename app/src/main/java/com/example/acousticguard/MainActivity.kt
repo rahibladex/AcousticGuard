@@ -135,7 +135,7 @@ class MainActivity : ComponentActivity() {
                         IconButton(onClick = { 
                             startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
                         }) {
-                            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = LuxuryGold)
+                            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = RoyalPurple)
                         }
                     }
                 )
@@ -224,7 +224,7 @@ class MainActivity : ComponentActivity() {
                         painter = painterResource(id = R.drawable.ic_shield),
                         contentDescription = null,
                         modifier = Modifier.size(50.dp),
-                        tint = LuxuryGold
+                        tint = RoyalPurple
                     )
                 }
                 Text(
@@ -251,7 +251,7 @@ class MainActivity : ComponentActivity() {
                 .height(110.dp)
                 .graphicsLayer(scaleX = scale, scaleY = scale)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Brush.horizontalGradient(listOf(LuxuryGold, Color(0xFFB8860B))))
+                .background(Brush.horizontalGradient(listOf(RoyalPurple, Color(0xFF5E0091))))
                 .clickable(interactionSource = interactionSource, indication = null) {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     handleToggleClick()
@@ -260,7 +260,7 @@ class MainActivity : ComponentActivity() {
         ) {
             Text(
                 text = if (isEmergencyMode) "STOP EMERGENCY" else if (isSafetyModeActive) "STOP TRACKING" else "START TRACKING",
-                color = DarkBg,
+                color = Color.White,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 1.sp
@@ -296,12 +296,12 @@ class MainActivity : ComponentActivity() {
                 .height(85.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(SurfaceDark)
-                .border(1.dp, LuxuryGold.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                .border(1.dp, RoyalPurple.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
                 .padding(12.dp)
         ) {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(icon, contentDescription = null, tint = LuxuryGold, modifier = Modifier.size(18.dp))
+                    Icon(icon, contentDescription = null, tint = RoyalPurple, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(title, color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
@@ -315,7 +315,7 @@ class MainActivity : ComponentActivity() {
     fun SectionHeader(title: String) {
         Text(
             text = title,
-            color = LuxuryGold,
+            color = RoyalPurple,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 8.dp),
@@ -331,11 +331,11 @@ class MainActivity : ComponentActivity() {
                 .height(54.dp)
                 .clip(RoundedCornerShape(14.dp))
                 .background(SurfaceDark)
-                .border(1.dp, LuxuryGold.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+                .border(1.dp, RoyalPurple.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
                 .clickable { isAddingContact = true },
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.Add, contentDescription = "Add", tint = LuxuryGold, modifier = Modifier.size(30.dp))
+            Icon(Icons.Default.Add, contentDescription = "Add", tint = RoyalPurple, modifier = Modifier.size(30.dp))
         }
     }
 
@@ -347,12 +347,12 @@ class MainActivity : ComponentActivity() {
                 .height(100.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(SurfaceDark)
-                .border(1.dp, LuxuryGold.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                .border(1.dp, RoyalPurple.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
                 .padding(20.dp),
             contentAlignment = Alignment.CenterStart
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.LocationOn, contentDescription = null, tint = LuxuryGold, modifier = Modifier.size(40.dp))
+                Icon(Icons.Default.LocationOn, contentDescription = null, tint = RoyalPurple, modifier = Modifier.size(40.dp))
                 Spacer(Modifier.width(16.dp))
                 Column {
                     Text("Location Accuracy", color = TextSecondary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
@@ -390,13 +390,13 @@ class MainActivity : ComponentActivity() {
                 .height(60.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(SurfaceDark)
-                .border(1.dp, LuxuryGold.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                .border(1.dp, RoyalPurple.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
                 .clickable { onClick() }
                 .padding(horizontal = 12.dp),
             contentAlignment = Alignment.Center
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null, tint = LuxuryGold, modifier = Modifier.size(20.dp))
+                Icon(icon, contentDescription = null, tint = RoyalPurple, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(text, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
@@ -491,7 +491,7 @@ class MainActivity : ComponentActivity() {
         AlertDialog(
             onDismissRequest = { isAddingContact = false },
             containerColor = SurfaceDark,
-            titleContentColor = LuxuryGold,
+            titleContentColor = RoyalPurple,
             textContentColor = TextPrimary,
             title = { Text("Add Trusted Contact") },
             text = {
@@ -505,8 +505,8 @@ class MainActivity : ComponentActivity() {
                         unfocusedContainerColor = DarkBg,
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
-                        cursorColor = LuxuryGold,
-                        focusedIndicatorColor = LuxuryGold
+                        cursorColor = RoyalPurple,
+                        focusedIndicatorColor = RoyalPurple
                     )
                 )
             },
@@ -522,7 +522,7 @@ class MainActivity : ComponentActivity() {
                             isAddingContact = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = LuxuryGold, contentColor = DarkBg)
+                    colors = ButtonDefaults.buttonColors(containerColor = RoyalPurple, contentColor = Color.White)
                 ) { Text("Add") }
             },
             dismissButton = {

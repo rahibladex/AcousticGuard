@@ -10,12 +10,12 @@ val Purple40 = Color(0xFF6650a4)
 val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
-// NariShakti SOS Luxury Palette
-val DarkBg = Color(0xFF0B0B0E)
-val SurfaceDark = Color(0xFF16161C)
-val TextPrimary = Color(0xFFF4F4F6)
+// NariShakti SOS Royal Purple Palette
+val DarkBg = Color(0xFF0F1016)
+val SurfaceDark = Color(0xFF1A1B26)
+val TextPrimary = Color(0xFFFFFFFF)
 val TextSecondary = Color(0xFF9A9AAB)
-val LuxuryGold = Color(0xFFD4AF37)
+val RoyalPurple = Color(0xFF8C00E3)
 
 // Legacy compatibility
 val RedEmergency = Color(0xFFFF3B30)

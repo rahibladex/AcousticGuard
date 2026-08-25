@@ -75,7 +75,7 @@ class SettingsActivity : ComponentActivity() {
                     title = { Text("SETTINGS", fontWeight = FontWeight.Bold, letterSpacing = 2.sp, color = TextPrimary) },
                     navigationIcon = {
                         IconButton(onClick = { finish() }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = LuxuryGold)
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = RoyalPurple)
                         }
                     }
                 )
@@ -95,7 +95,7 @@ class SettingsActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
                     color = SurfaceDark,
-                    border = BorderStroke(1.dp, LuxuryGold.copy(alpha = 0.2f))
+                    border = BorderStroke(1.dp, RoyalPurple.copy(alpha = 0.2f))
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         ThemeOption("Follow System", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM, themeMode) {
@@ -124,7 +124,7 @@ class SettingsActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
                     color = SurfaceDark,
-                    border = BorderStroke(1.dp, LuxuryGold.copy(alpha = 0.2f))
+                    border = BorderStroke(1.dp, RoyalPurple.copy(alpha = 0.2f))
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         ToggleOption("Flashing Flashlight", emergencyFlashlight) {
@@ -139,7 +139,7 @@ class SettingsActivity : ComponentActivity() {
                             emergencyVibration = it
                             prefs.edit().putBoolean("emergency_vibration", it).apply()
                         }
-                        Divider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = LuxuryGold.copy(alpha = 0.1f))
+                        Divider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = RoyalPurple.copy(alpha = 0.1f))
                         ToggleOption("Silent SOS Mode", silentSosMode) {
                             silentSosMode = it
                             prefs.edit().putBoolean("silent_sos_mode", it).apply()
@@ -163,7 +163,7 @@ class SettingsActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
                     color = SurfaceDark,
-                    border = BorderStroke(1.dp, LuxuryGold.copy(alpha = 0.2f))
+                    border = BorderStroke(1.dp, RoyalPurple.copy(alpha = 0.2f))
                 ) {
                     val updateManager = remember { UpdateManager(this@SettingsActivity) }
                     var updateStatus by remember { mutableStateOf("Version: ${packageManager.getPackageInfo(packageName, 0).versionName}") }
@@ -195,10 +195,10 @@ class SettingsActivity : ComponentActivity() {
                             enabled = !isChecking,
                             modifier = Modifier.fillMaxWidth().height(54.dp),
                             shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = LuxuryGold, contentColor = DarkBg)
+                            colors = ButtonDefaults.buttonColors(containerColor = RoyalPurple, contentColor = Color.White)
                         ) {
                             if (isChecking) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = DarkBg, strokeWidth = 2.dp)
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text("Checking...")
                             } else {
@@ -216,7 +216,7 @@ class SettingsActivity : ComponentActivity() {
         Text(
             text = title, 
             style = MaterialTheme.typography.titleSmall, 
-            color = LuxuryGold,
+            color = RoyalPurple,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
             letterSpacing = 1.sp
@@ -235,7 +235,7 @@ class SettingsActivity : ComponentActivity() {
             RadioButton(
                 selected = (mode == currentMode), 
                 onClick = { onSelect(mode) },
-                colors = RadioButtonDefaults.colors(selectedColor = LuxuryGold, unselectedColor = TextSecondary.copy(alpha = 0.5f))
+                colors = RadioButtonDefaults.colors(selectedColor = RoyalPurple, unselectedColor = TextSecondary.copy(alpha = 0.5f))
             )
             Text(label, modifier = Modifier.padding(start = 12.dp), color = TextPrimary)
         }
@@ -255,8 +255,8 @@ class SettingsActivity : ComponentActivity() {
                 checked = checked, 
                 onCheckedChange = onToggle,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = DarkBg,
-                    checkedTrackColor = LuxuryGold,
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = RoyalPurple,
                     uncheckedThumbColor = TextSecondary,
                     uncheckedTrackColor = SurfaceDark,
                     uncheckedBorderColor = TextSecondary.copy(alpha = 0.3f)
