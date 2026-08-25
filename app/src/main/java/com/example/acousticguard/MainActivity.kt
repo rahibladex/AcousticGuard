@@ -40,7 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -197,7 +197,7 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun MainToggleButton() {
-        val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+        val haptic = androidx.compose.ui.platform.androidx.compose.ui.platform.LocalHapticFeedback.current
         val interactionSource = remember { MutableInteractionSource() }
         val isPressed by interactionSource.collectIsPressedAsState()
         
@@ -291,10 +291,10 @@ class MainActivity : ComponentActivity() {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatusCard(modifier = Modifier.weight(1f), title = "AI Audio", status = aiStatus, icon = androidx.compose.material.icons.Icons.Default.Mic)
-                StatusCard(modifier = Modifier.weight(1f), title = "Motion SOS", status = motionStatus, icon = androidx.compose.material.icons.Icons.Default.DirectionsRun)
+                StatusCard(modifier = Modifier.weight(1f), title = "AI Audio", status = aiStatus, icon = androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.Mic)
+                StatusCard(modifier = Modifier.weight(1f), title = "Motion SOS", status = motionStatus, icon = androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.DirectionsRun)
             }
-            StatusCard(modifier = Modifier.fillMaxWidth(), title = "Location Accuracy", status = gpsStatus, icon = androidx.compose.material.icons.Icons.Default.LocationOn)
+            StatusCard(modifier = Modifier.fillMaxWidth(), title = "Location Accuracy", status = gpsStatus, icon = androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.LocationOn)
         }
     }
 
@@ -330,7 +330,7 @@ class MainActivity : ComponentActivity() {
             ActionBtn(
                 modifier = Modifier.weight(1f),
                 text = if (isAlarmActive) "STOP ALARM" else "ALARM",
-                icon = rememberVectorPainter(androidx.compose.material.icons.Icons.Default.NotificationsActive),
+                icon = rememberVectorPainter(androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.NotificationsActive),
                 color = if (isAlarmActive) Color.DarkGray else RedEmergency,
                 onClick = { emergencyManager.toggleAlarm() }
             )
@@ -369,7 +369,7 @@ class MainActivity : ComponentActivity() {
         ) {
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(androidx.compose.material.icons.Icons.Default.Handyman, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+                    Icon(androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.Handyman, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(12.dp))
                     Text("Safety Tools", fontWeight = FontWeight.Bold, color = Color.White)
                 }
@@ -380,14 +380,14 @@ class MainActivity : ComponentActivity() {
                     ToolBtn(
                         modifier = Modifier.weight(1.2f),
                         text = if (isSafeWalkActive) "Stop $safeWalkRemainingTime" else "Safe Walk",
-                        icon = androidx.compose.material.icons.Icons.Default.Timer,
+                        icon = androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.Timer,
                         active = isSafeWalkActive,
                         onClick = { if (isSafeWalkActive) stopSafeWalkTimer() else startSafeWalkTimer() }
                     )
                     ToolBtn(
                         modifier = Modifier.weight(1f),
                         text = "Fake Call",
-                        icon = androidx.compose.material.icons.Icons.Default.AddIcCall,
+                        icon = androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.AddIcCall,
                         active = false,
                         onClick = { triggerFakeCall() }
                     )
@@ -398,7 +398,7 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun ToolBtn(modifier: Modifier, text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, active: Boolean, onClick: () -> Unit) {
-        val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+        val haptic = androidx.compose.ui.platform.androidx.compose.ui.platform.LocalHapticFeedback.current
         Button(
             onClick = { 
                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -432,12 +432,12 @@ class MainActivity : ComponentActivity() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(androidx.compose.material.icons.Icons.Default.ShieldMoon, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+                        Icon(androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.ShieldMoon, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(12.dp))
                         Text("Trusted Contacts", fontWeight = FontWeight.Bold, color = Color.White)
                     }
                     IconButton(onClick = { isAddingContact = true }) {
-                        Icon(Icons.Default.AddCircle, contentDescription = "Add", tint = GreenActive)
+                        Icon(androidx.compose.material.icons.Icons.Default.AddCircle, contentDescription = "Add", tint = GreenActive)
                     }
                 }
                 
@@ -475,7 +475,7 @@ class MainActivity : ComponentActivity() {
                 Text(contact, color = Color.White, fontWeight = FontWeight.Medium)
             }
             IconButton(onClick = onRemove, modifier = Modifier.size(24.dp)) {
-                Icon(androidx.compose.material.icons.Icons.Default.RemoveCircleOutline, contentDescription = null, tint = RedEmergency.copy(alpha = 0.7f))
+                Icon(androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.RemoveCircleOutline, contentDescription = null, tint = RedEmergency.copy(alpha = 0.7f))
             }
         }
     }
@@ -502,7 +502,7 @@ class MainActivity : ComponentActivity() {
                     )
 
                     Icon(
-                        androidx.compose.material.icons.Icons.Default.ReportProblem, 
+                        androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.ReportProblem, 
                         contentDescription = null, 
                         modifier = Modifier.size(80.dp).graphicsLayer(scaleX = scale, scaleY = scale),
                         tint = Color.White
@@ -760,3 +760,4 @@ class MainActivity : ComponentActivity() {
         unregisterReceiver(audioUpdateReceiver)
     }
 }
+
