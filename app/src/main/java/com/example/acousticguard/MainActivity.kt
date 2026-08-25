@@ -109,7 +109,7 @@ class MainActivity : ComponentActivity() {
             NariShaktiSOSTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Color(0xFF121212)
+                    color = DarkBg
                 ) {
                     MainScreenContent()
                 }
@@ -130,12 +130,12 @@ class MainActivity : ComponentActivity() {
             topBar = {
                 CenterAlignedTopAppBar(
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
-                    title = { Text("NariShakti SOS", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color.White) },
+                    title = { Text("NariShakti SOS", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = TextPrimary) },
                     actions = {
                         IconButton(onClick = { 
                             startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
                         }) {
-                            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
+                            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = LuxuryGold)
                         }
                     }
                 )
@@ -205,7 +205,7 @@ class MainActivity : ComponentActivity() {
         ) {
             Text(
                 text = "Apki Suraksha,\nHar kadam,\nHar pal....",
-                color = Color.White,
+                color = TextPrimary,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 lineHeight = 32.sp,
@@ -217,19 +217,19 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier
                         .size(80.dp)
                         .clip(CircleShape)
-                        .background(Color.LightGray.copy(alpha = 0.8f)),
+                        .background(SurfaceDark),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_shield),
                         contentDescription = null,
                         modifier = Modifier.size(50.dp),
-                        tint = Color(0xFF121212)
+                        tint = LuxuryGold
                     )
                 }
                 Text(
                     text = "Nari Shakti",
-                    color = Color.White,
+                    color = TextSecondary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(top = 4.dp)
@@ -251,7 +251,7 @@ class MainActivity : ComponentActivity() {
                 .height(110.dp)
                 .graphicsLayer(scaleX = scale, scaleY = scale)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Brush.horizontalGradient(listOf(DeepBlueStart, DeepBlueEnd)))
+                .background(Brush.horizontalGradient(listOf(LuxuryGold, Color(0xFFB8860B))))
                 .clickable(interactionSource = interactionSource, indication = null) {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     handleToggleClick()
@@ -260,7 +260,7 @@ class MainActivity : ComponentActivity() {
         ) {
             Text(
                 text = if (isEmergencyMode) "STOP EMERGENCY" else if (isSafetyModeActive) "STOP TRACKING" else "START TRACKING",
-                color = Color.White,
+                color = DarkBg,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 1.sp
@@ -295,17 +295,18 @@ class MainActivity : ComponentActivity() {
             modifier = modifier
                 .height(85.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Brush.horizontalGradient(listOf(DeepBlueStart, DeepBlueEnd)))
+                .background(SurfaceDark)
+                .border(1.dp, LuxuryGold.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
                 .padding(12.dp)
         ) {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Icon(icon, contentDescription = null, tint = LuxuryGold, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(title, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(title, color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.height(4.dp))
-                Text(status, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, lineHeight = 18.sp)
+                Text(status, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold, lineHeight = 18.sp)
             }
         }
     }
@@ -314,10 +315,11 @@ class MainActivity : ComponentActivity() {
     fun SectionHeader(title: String) {
         Text(
             text = title,
-            color = Color.White,
-            fontSize = 16.sp,
+            color = LuxuryGold,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 8.dp),
+            letterSpacing = 1.sp
         )
     }
 
@@ -328,11 +330,12 @@ class MainActivity : ComponentActivity() {
                 .fillMaxWidth()
                 .height(54.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(Brush.horizontalGradient(listOf(DeepBlueStart, DeepBlueEnd)))
+                .background(SurfaceDark)
+                .border(1.dp, LuxuryGold.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
                 .clickable { isAddingContact = true },
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White, modifier = Modifier.size(30.dp))
+            Icon(Icons.Default.Add, contentDescription = "Add", tint = LuxuryGold, modifier = Modifier.size(30.dp))
         }
     }
 
@@ -343,16 +346,17 @@ class MainActivity : ComponentActivity() {
                 .fillMaxWidth()
                 .height(100.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Brush.horizontalGradient(listOf(DeepBlueStart, DeepBlueEnd)))
+                .background(SurfaceDark)
+                .border(1.dp, LuxuryGold.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
                 .padding(20.dp),
             contentAlignment = Alignment.CenterStart
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp))
+                Icon(Icons.Default.LocationOn, contentDescription = null, tint = LuxuryGold, modifier = Modifier.size(40.dp))
                 Spacer(Modifier.width(16.dp))
                 Column {
-                    Text("Location Accuracy", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Text(gpsStatus, color = Color.White, fontSize = 16.sp)
+                    Text("Location Accuracy", color = TextSecondary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text(gpsStatus, color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -385,15 +389,16 @@ class MainActivity : ComponentActivity() {
             modifier = modifier
                 .height(60.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Brush.horizontalGradient(listOf(DeepBlueStart, DeepBlueEnd)))
+                .background(SurfaceDark)
+                .border(1.dp, LuxuryGold.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
                 .clickable { onClick() }
                 .padding(horizontal = 12.dp),
             contentAlignment = Alignment.Center
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                Icon(icon, contentDescription = null, tint = LuxuryGold, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(text, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text(text, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -405,12 +410,13 @@ class MainActivity : ComponentActivity() {
                 .fillMaxWidth()
                 .padding(vertical = 4.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color.White.copy(alpha = 0.1f))
+                .background(SurfaceDark.copy(alpha = 0.7f))
+                .border(0.5.dp, TextSecondary.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(contact, color = Color.White, fontWeight = FontWeight.Medium)
+            Text(contact, color = TextPrimary, fontWeight = FontWeight.Medium)
             IconButton(onClick = onRemove, modifier = Modifier.size(24.dp)) {
                 Icon(Icons.Default.RemoveCircleOutline, contentDescription = null, tint = RedEmergency.copy(alpha = 0.8f))
             }
@@ -484,29 +490,43 @@ class MainActivity : ComponentActivity() {
         var phoneNumber by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { isAddingContact = false },
+            containerColor = SurfaceDark,
+            titleContentColor = LuxuryGold,
+            textContentColor = TextPrimary,
             title = { Text("Add Trusted Contact") },
             text = {
                 TextField(
                     value = phoneNumber,
                     onValueChange = { phoneNumber = it },
-                    label = { Text("Phone Number") },
-                    modifier = Modifier.fillMaxWidth()
+                    label = { Text("Phone Number", color = TextSecondary) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = DarkBg,
+                        unfocusedContainerColor = DarkBg,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        cursorColor = LuxuryGold,
+                        focusedIndicatorColor = LuxuryGold
+                    )
                 )
             },
             confirmButton = {
-                Button(onClick = {
-                    if (phoneNumber.isNotEmpty()) {
-                        val prefs = getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
-                        val current = trustedContacts.toMutableSet()
-                        current.add(phoneNumber)
-                        trustedContacts = current
-                        prefs.edit().putStringSet("trusted_contacts", trustedContacts).apply()
-                        isAddingContact = false
-                    }
-                }) { Text("Add") }
+                Button(
+                    onClick = {
+                        if (phoneNumber.isNotEmpty()) {
+                            val prefs = getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
+                            val current = trustedContacts.toMutableSet()
+                            current.add(phoneNumber)
+                            trustedContacts = current
+                            prefs.edit().putStringSet("trusted_contacts", trustedContacts).apply()
+                            isAddingContact = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = LuxuryGold, contentColor = DarkBg)
+                ) { Text("Add") }
             },
             dismissButton = {
-                TextButton(onClick = { isAddingContact = false }) { Text("Cancel") }
+                TextButton(onClick = { isAddingContact = false }) { Text("Cancel", color = TextSecondary) }
             }
         )
     }
