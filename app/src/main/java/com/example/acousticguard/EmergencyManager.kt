@@ -36,7 +36,7 @@ class EmergencyManager(private val context: Context) {
     }
 
     fun activateEmergencyMode() {
-        val prefs = context.getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
         val isSilent = prefs.getBoolean("silent_sos_mode", false)
 
         if (!isSilent) {
@@ -176,7 +176,7 @@ class EmergencyManager(private val context: Context) {
     }
 
     fun sendCustomSms(message: String) {
-        val prefs = context.getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
         val contacts = prefs.getStringSet("trusted_contacts", setOf()) ?: setOf()
         
         if (contacts.isEmpty()) {

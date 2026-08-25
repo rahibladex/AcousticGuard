@@ -21,7 +21,7 @@ import kotlin.concurrent.thread
 class UpdateManager(private val context: Context) {
 
     private val GITHUB_API_URL = "https://api.github.com/repos/rahibladex/AcousticGuard/releases/latest"
-    private val PREFS_NAME = "AcousticGuardUpdatePrefs"
+    private val PREFS_NAME = "NariShaktiSOSUpdatePrefs"
     private val KEY_DOWNLOAD_ID = "download_id"
 
     fun checkForUpdates(onUpdateAvailable: (String, String) -> Unit, onNoUpdate: () -> Unit, onError: (String) -> Unit) {
@@ -83,10 +83,10 @@ class UpdateManager(private val context: Context) {
 
     fun downloadAndInstall(downloadUrl: String) {
         val request = DownloadManager.Request(Uri.parse(downloadUrl))
-            .setTitle("AcousticGuard Update")
+            .setTitle("NariShakti SOS Update")
             .setDescription("Downloading latest version...")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, "AcousticGuard-Update.apk")
+            .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, "NariShaktiSOS-Update.apk")
             .setAllowedOverMetered(true)
             .setAllowedOverRoaming(true)
 
@@ -110,7 +110,7 @@ class UpdateManager(private val context: Context) {
     }
 
     private fun installApk() {
-        val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "AcousticGuard-Update.apk")
+        val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "NariShaktiSOS-Update.apk")
         if (file.exists()) {
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
             val intent = Intent(Intent.ACTION_VIEW)

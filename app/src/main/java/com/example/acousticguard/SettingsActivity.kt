@@ -40,7 +40,7 @@ class SettingsActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun SettingsScreen() {
-        val prefs = remember { getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE) }
+        val prefs = remember { getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE) }
         
         var themeMode by remember { 
             mutableIntStateOf(prefs.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)) 

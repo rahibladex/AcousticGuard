@@ -118,7 +118,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun loadSettings() {
-        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
         trustedContacts = prefs.getStringSet("trusted_contacts", setOf()) ?: setOf()
     }
 
@@ -291,10 +291,10 @@ class MainActivity : ComponentActivity() {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatusCard(modifier = Modifier.weight(1f), title = "AI Audio", status = aiStatus, icon = androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.Mic)
-                StatusCard(modifier = Modifier.weight(1f), title = "Motion SOS", status = motionStatus, icon = androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.DirectionsRun)
+                StatusCard(modifier = Modifier.weight(1f), title = "AI Audio", status = aiStatus, icon = Icons.Default.Mic)
+                StatusCard(modifier = Modifier.weight(1f), title = "Motion SOS", status = motionStatus, icon = Icons.Default.DirectionsRun)
             }
-            StatusCard(modifier = Modifier.fillMaxWidth(), title = "Location Accuracy", status = gpsStatus, icon = androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.LocationOn)
+            StatusCard(modifier = Modifier.fillMaxWidth(), title = "Location Accuracy", status = gpsStatus, icon = Icons.Default.LocationOn)
         }
     }
 
@@ -330,7 +330,7 @@ class MainActivity : ComponentActivity() {
             ActionBtn(
                 modifier = Modifier.weight(1f),
                 text = if (isAlarmActive) "STOP ALARM" else "ALARM",
-                icon = rememberVectorPainter(androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.NotificationsActive),
+                icon = rememberVectorPainter(Icons.Default.NotificationsActive),
                 color = if (isAlarmActive) Color.DarkGray else RedEmergency,
                 onClick = { emergencyManager.toggleAlarm() }
             )
@@ -369,7 +369,7 @@ class MainActivity : ComponentActivity() {
         ) {
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.Handyman, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Handyman, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(12.dp))
                     Text("Safety Tools", fontWeight = FontWeight.Bold, color = Color.White)
                 }
@@ -380,14 +380,14 @@ class MainActivity : ComponentActivity() {
                     ToolBtn(
                         modifier = Modifier.weight(1.2f),
                         text = if (isSafeWalkActive) "Stop $safeWalkRemainingTime" else "Safe Walk",
-                        icon = androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.Timer,
+                        icon = Icons.Default.Timer,
                         active = isSafeWalkActive,
                         onClick = { if (isSafeWalkActive) stopSafeWalkTimer() else startSafeWalkTimer() }
                     )
                     ToolBtn(
                         modifier = Modifier.weight(1f),
                         text = "Fake Call",
-                        icon = androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.AddIcCall,
+                        icon = Icons.Default.AddIcCall,
                         active = false,
                         onClick = { triggerFakeCall() }
                     )
@@ -432,7 +432,7 @@ class MainActivity : ComponentActivity() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.ShieldMoon, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.ShieldMoon, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(12.dp))
                         Text("Trusted Contacts", fontWeight = FontWeight.Bold, color = Color.White)
                     }
@@ -475,7 +475,7 @@ class MainActivity : ComponentActivity() {
                 Text(contact, color = Color.White, fontWeight = FontWeight.Medium)
             }
             IconButton(onClick = onRemove, modifier = Modifier.size(24.dp)) {
-                Icon(androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.RemoveCircleOutline, contentDescription = null, tint = RedEmergency.copy(alpha = 0.7f))
+                Icon(Icons.Default.RemoveCircleOutline, contentDescription = null, tint = RedEmergency.copy(alpha = 0.7f))
             }
         }
     }
@@ -502,7 +502,7 @@ class MainActivity : ComponentActivity() {
                     )
 
                     Icon(
-                        androidx.compose.material.icons.androidx.compose.material.icons.Icons.Default.ReportProblem, 
+                        Icons.Default.ReportProblem, 
                         contentDescription = null, 
                         modifier = Modifier.size(80.dp).graphicsLayer(scaleX = scale, scaleY = scale),
                         tint = Color.White

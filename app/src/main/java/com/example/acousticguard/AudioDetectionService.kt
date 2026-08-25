@@ -41,7 +41,7 @@ class AudioDetectionService : Service() {
             val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
             val batteryPct = level * 100 / scale.toFloat()
             
-            val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
+            val prefs = getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
             if (prefs.getBoolean("low_battery_alert", true) && batteryPct <= 5f && !lowBatteryAlertSent) {
                 lowBatteryAlertSent = true
                 emergencyManager.sendCustomSms("Low Battery Alert! My battery is below 5%.")
@@ -109,7 +109,7 @@ class AudioDetectionService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val serviceChannel = NotificationChannel(
                 CHANNEL_ID,
-                "Acoustic Guard Service Channel",
+                "NariShakti SOS Service Channel",
                 NotificationManager.IMPORTANCE_LOW
             )
             val manager = getSystemService(NotificationManager::class.java)
@@ -164,7 +164,7 @@ class AudioDetectionService : Service() {
         }
 
         // Get user-defined threshold
-        val prefs = getSharedPreferences("AcousticGuardPrefs", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
         val threshold = prefs.getInt("detection_sensitivity", 80)
 
         // Pass dummy features (for prototype), loudness, and threshold to AudioClassifier
