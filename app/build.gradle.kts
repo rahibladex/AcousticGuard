@@ -55,6 +55,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     // Material 3 & UI
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     
