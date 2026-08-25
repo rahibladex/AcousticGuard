@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="red">#FFFF0000</color>
+    <color name="green">#FF00FF00</color>
+    <color name="blue">#FF0000FF</color>
+
+    <color name="call_bg">#1C1C1E</color>
+    <color name="call_decline">#FF3B30</color>
+    <color name="call_accept">#34C759</color>
+    <color name="call_text_secondary">#8E8E93</color>
+</resources>
