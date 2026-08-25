@@ -27,8 +27,11 @@ jobs:
         with:
           gradle-version: 8.7
 
+      - name: Debug - List layout files
+        run: ls -R app/src/main/res/layout
+
       - name: Build with Gradle
-        run: gradle :app:assembleDebug --stacktrace
+        run: gradle clean :app:assembleDebug --stacktrace
 
       - name: Prepare APK for Upload
         run: |
