@@ -24,6 +24,13 @@ class EmergencyManager(private val context: Context) {
     private var mediaRecorder: MediaRecorder? = null
     
     private val emergencyLocationManager = EmergencyLocationManager(context)
+    private val handler = Handler(Looper.getMainLooper())
+    private val liveLocationRunnable = object : Runnable {
+        override fun run() {
+            updateAndSendLocation()
+            handler.postDelayed(this, 2 * 60 * 1000) // Send every 2 minutes
+        }
+    }
 
     fun triggerEmergency() {
         activateEmergencyMode()
@@ -51,6 +58,12 @@ class EmergencyManager(private val context: Context) {
 
         startAudioRecording()
         
+        // Start periodic live location updates
+        handler.removeCallbacks(liveLocationRunnable)
+        handler.post(liveLocationRunnable)
+    }
+
+    private fun updateAndSendLocation() {
         emergencyLocationManager.getLastLocation { location ->
             val mapsLink = if (location != null) {
                 "https://maps.google.com/?q=${location.latitude},${location.longitude}"
@@ -65,6 +78,7 @@ class EmergencyManager(private val context: Context) {
         stopAlarm()
         stopFlashlight()
         stopAudioRecording()
+        handler.removeCallbacks(liveLocationRunnable)
     }
 
     fun toggleAlarm() {
@@ -172,7 +186,7 @@ class EmergencyManager(private val context: Context) {
     }
 
     private fun sendEmergencySms(mapsLink: String) {
-        sendCustomSms("EMERGENCY! I need help. My location: $mapsLink")
+        sendCustomSms("EMERGENCY LIVE LOCATION! I need help. My current position: $mapsLink (This link will be updated every 2 mins)")
     }
 
     fun sendCustomSms(message: String) {
