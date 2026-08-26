@@ -66,6 +66,9 @@ class SettingsActivity : ComponentActivity() {
         var lowBatteryAlert by remember { 
             mutableStateOf(prefs.getBoolean("low_battery_alert", true)) 
         }
+        var safeWalkDuration by remember { 
+            mutableIntStateOf(prefs.getInt("safe_walk_duration", 15)) 
+        }
 
         Scaffold(
             containerColor = Color.Transparent,
@@ -151,6 +154,54 @@ class SettingsActivity : ComponentActivity() {
                         ToggleOption("Low Battery Alert", lowBatteryAlert) {
                             lowBatteryAlert = it
                             prefs.edit().putBoolean("low_battery_alert", it).apply()
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                SettingSectionTitle("Safety Tool Settings")
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = SurfaceDark,
+                    border = BorderStroke(1.dp, RoyalPurple.copy(alpha = 0.2f))
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            "Safe Walk Timer Duration", 
+                            color = TextPrimary, 
+                            modifier = Modifier.padding(start = 12.dp, top = 8.dp),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        val durations = listOf(5, 15, 30, 60)
+                        Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            durations.forEach { duration ->
+                                FilterChip(
+                                    selected = safeWalkDuration == duration,
+                                    onClick = {
+                                        safeWalkDuration = duration
+                                        prefs.edit().putInt("safe_walk_duration", duration).apply()
+                                    },
+                                    label = { Text("$duration min") },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = RoyalPurple,
+                                        selectedLabelColor = Color.White,
+                                        containerColor = SurfaceDark,
+                                        labelColor = TextSecondary
+                                    ),
+                                    border = FilterChipDefaults.filterChipBorder(
+                                        borderColor = RoyalPurple.copy(alpha = 0.5f),
+                                        selectedBorderColor = RoyalPurple
+                                    )
+                                )
+                            }
                         }
                     }
                 }

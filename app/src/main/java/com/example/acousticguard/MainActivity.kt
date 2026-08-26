@@ -671,8 +671,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startSafeWalkTimer() {
+        val prefs = getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
+        val durationMinutes = prefs.getInt("safe_walk_duration", 15)
+        
         isSafeWalkActive = true
-        safeWalkTimer = object : CountDownTimer(15 * 60 * 1000, 1000) {
+        safeWalkTimer = object : CountDownTimer(durationMinutes.toLong() * 60 * 1000, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 val minutes = (millisUntilFinished / 1000) / 60
                 val seconds = (millisUntilFinished / 1000) % 60
@@ -683,7 +686,7 @@ class MainActivity : ComponentActivity() {
                 emergencyManager.triggerEmergency()
             }
         }.start()
-        Toast.makeText(this, "Safe Walk Timer Started (15m)", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Safe Walk Timer Started (${durationMinutes}m)", Toast.LENGTH_SHORT).show()
     }
 
     private fun stopSafeWalkTimer() {
