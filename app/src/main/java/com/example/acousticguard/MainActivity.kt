@@ -364,21 +364,32 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun SafetyToolsRow() {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                ToolButton(
+                    modifier = Modifier.weight(1f),
+                    text = if (isSafeWalkActive) safeWalkRemainingTime else "Safe Walk",
+                    icon = Icons.Default.Timer,
+                    onClick = { if (isSafeWalkActive) stopSafeWalkTimer() else startSafeWalkTimer() }
+                )
+                ToolButton(
+                    modifier = Modifier.weight(1f),
+                    text = "Fake Call",
+                    icon = Icons.Default.AddIcCall,
+                    onClick = { triggerFakeCall() }
+                )
+            }
             ToolButton(
-                modifier = Modifier.weight(1f),
-                text = if (isSafeWalkActive) safeWalkRemainingTime else "Safe Walk",
-                icon = Icons.Default.Timer,
-                onClick = { if (isSafeWalkActive) stopSafeWalkTimer() else startSafeWalkTimer() }
-            )
-            ToolButton(
-                modifier = Modifier.weight(1f),
-                text = "Fake Call",
-                icon = Icons.Default.AddIcCall,
-                onClick = { triggerFakeCall() }
+                modifier = Modifier.fillMaxWidth(),
+                text = "TEST EMERGENCY ALARM",
+                icon = Icons.Default.NotificationsActive,
+                onClick = { 
+                    showEmergencyDialog = true
+                    startCountdown()
+                }
             )
         }
     }
