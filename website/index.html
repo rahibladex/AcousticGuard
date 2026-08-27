@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NariShakti SOS — AI-Powered Personal Safety & Acoustic Distress Guardian</title>
+  <meta name="description" content="NariShakti SOS (AcousticGuard) is an open-source Android personal safety app using Edge AI audio detection, real-time GPS location beaconing, and automated emergency protocols.">
+  <meta name="keywords" content="NariShakti SOS, AcousticGuard, Personal Safety App, Women Safety, Android SOS, Edge AI, Audio Detection, Emergency SMS, Safe Walk, Fake Call">
+  <meta name="author" content="Rahil & Open Source Contributors">
+
+  <!-- OpenGraph / Social Meta Tags -->
+  <meta property="og:title" content="NariShakti SOS — AI-Powered Personal Safety Guardian">
+  <meta property="og:description" content="Open-source Android application featuring Edge AI sound detection, live location GPS beacons, Safe Walk timer, and silent emergency protocols.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="assets/app_logo.png">
+
+  <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" type="image/png" href="assets/app_logo.png">
+</head>
+<body>
+
+  <!-- Ambient Light Orbs -->
+  <div class="ambient-glow-1"></div>
+  <div class="ambient-glow-2"></div>
+
+  <!-- Header / Navigation -->
+  <header class="site-header">
+    <div class="container nav-container">
+      <a href="#" class="brand">
+        <img src="assets/app_logo.png" alt="NariShakti SOS Logo" class="brand-icon">
+        <span class="brand-name">NariShakti<span>SOS</span></span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#features" class="nav-link">Features</a></li>
+        <li><a href="#acoustic-lab" class="nav-link">Sensitivity Lab</a></li>
+        <li><a href="#safety-tools" class="nav-link">Safety Tools</a></li>
+        <li><a href="#how-it-works" class="nav-link">How It Works</a></li>
+        <li><a href="#changelog" class="nav-link">Changelog</a></li>
+        <li><a href="#permissions" class="nav-link">Privacy & Permissions</a></li>
+        <li><a href="#faq" class="nav-link">FAQ</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">
+          🌙
+        </button>
+        <a href="https://github.com/rahibladex/AcousticGuard" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          GitHub
+        </a>
+        <a href="https://github.com/rahibladex/AcousticGuard/releases" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">
+          Download APK
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="container hero-grid">
+      <div class="hero-content">
+        <div class="hero-badges">
+          <span class="badge badge-purple">🚀 v5.5.0 Latest Release</span>
+          <span class="badge badge-green">🔒 100% On-Device AI</span>
+          <span class="badge badge-blue">⚖️ Open Source (MIT)</span>
+        </div>
+
+        <h1 class="hero-title">
+          Intelligent Acoustic Defense & <span class="gradient-text">Emergency Response</span>
+        </h1>
+
+        <p class="hero-description">
+          <strong>NariShakti SOS</strong> is an open-source Android personal safety guardian. Using Edge AI audio inference, it monitors ambient environments in real time for screams, shouts, or distress sounds—and immediately coordinates live GPS beacons, stealth alerts, and automated safety protocols.
+        </p>
+
+        <div class="hero-actions">
+          <a href="https://github.com/rahibladex/AcousticGuard/releases" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-lg">
+            <span>📥 Download Latest APK (v5.5.0)</span>
+          </a>
+          <a href="#acoustic-lab" class="btn btn-secondary btn-lg">
+            <span>🧪 Try Sensitivity Lab</span>
+          </a>
+        </div>
+
+        <div class="hero-stats">
+          <div class="stat-item">
+            <span class="stat-number">5.0s</span>
+            <span class="stat-label">Grace Abort Buffer</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number">100%</span>
+            <span class="stat-label">Local Edge Privacy</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number">40-100dB</span>
+            <span class="stat-label">Calibrated Sensitivity</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Interactive Android Phone Mockup -->
+      <div class="phone-mockup-container">
+        <div class="phone-ambient-halo"></div>
+        <div class="phone-frame">
+          <div class="phone-notch">
+            <div class="phone-speaker"></div>
+            <div class="phone-cam"></div>
+          </div>
+
+          <div class="phone-screen">
+            <!-- App Top Bar -->
+            <div class="app-topbar">
+              <div class="app-brand-title">
+                <img src="assets/app_logo.png" alt="App Icon" style="width:22px;height:22px;border-radius:6px;object-fit:cover;">
+                NARISHAKTI SOS
+              </div>
+              <span class="app-status-badge">v5.5.0</span>
+            </div>
+
+            <!-- Status Grid -->
+            <div class="app-status-grid">
+              <div class="app-status-card">
+                <span class="app-status-label">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg>
+                  AI Audio
+                </span>
+                <span class="app-status-value" id="phoneAiStatus">AI Detection:<br>OFF</span>
+              </div>
+              <div class="app-status-card">
+                <span class="app-status-label">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7"/></svg>
+                  Motion SOS
+                </span>
+                <span class="app-status-value" id="phoneMotionStatus">Motion SOS:<br>Inactive</span>
+              </div>
+            </div>
+
+            <!-- Location Status Card -->
+            <div class="app-location-card">
+              <span class="app-loc-icon">📍</span>
+              <div class="app-loc-details">
+                <span class="app-loc-title">Location Tracking</span>
+                <span class="app-loc-state" id="phoneGpsStatus">GPS : OFF</span>
+              </div>
+            </div>
+
+            <!-- Main Pulsing Action Button -->
+            <button id="phoneTrackingBtn" class="app-tracking-btn" title="Click to Toggle Safety Mode">
+              <span id="phoneTrackingBtnText">START TRACKING</span>
+            </button>
+
+            <!-- Safety Tools Mini Row -->
+            <div class="app-tools-row">
+              <button class="app-tool-btn" onclick="document.getElementById('safety-tools').scrollIntoView({behavior:'smooth'})">
+                ⏱️ Safe Walk
+              </button>
+              <button class="app-tool-btn" onclick="document.getElementById('safety-tools').scrollIntoView({behavior:'smooth'})">
+                📞 Fake Call
+              </button>
+            </div>
+
+            <!-- Test Emergency Alarm Button -->
+            <button id="phoneTestAlarmBtn" class="app-test-alarm-btn">
+              ⚠️ TEST EMERGENCY ALARM
+            </button>
+
+            <!-- Contacts Mini Section -->
+            <div class="app-contacts-header">
+              <span>TRUSTED CONTACTS</span>
+              <button id="phoneAddContactBtn" style="background:none;border:none;color:#8C00E3;font-size:1.1rem;cursor:pointer;">＋</button>
+            </div>
+            <div id="phoneContactsList" class="app-contacts-list"></div>
+
+            <!-- Emergency 5-Second Modal Overlay -->
+            <div id="phoneEmergencyModal" class="phone-modal-overlay hidden">
+              <div class="emergency-pulse-icon">⚠️</div>
+              <div class="emergency-title">EMERGENCY ACTIVE</div>
+              <div class="emergency-sub">Protocol starts in</div>
+              <div id="phoneCountdownNum" class="emergency-countdown-num">5</div>
+              <button id="phoneSafeBtn" class="emergency-safe-btn">I AM SAFE</button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Sensitivity & Decibel Acoustic Lab -->
+  <section id="acoustic-lab" class="acoustic-lab-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Edge AI Calibration</span>
+        <h2 class="section-title">Interactive Acoustic & Sensitivity Lab</h2>
+        <p class="section-desc">
+          Test real-time acoustic thresholds with synthesized audio waveforms or connect your browser's microphone to inspect ambient room sound in decibels.
+        </p>
+      </div>
+
+      <div class="lab-grid">
+        <!-- Visualizer & Live Decibel Meter -->
+        <div class="glass-card lab-visualizer-card">
+          <div class="decibel-meter-row">
+            <div>
+              <span style="font-size:0.8rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;">Ambient Sound Level</span>
+              <div class="db-live-indicator">
+                <span id="liveDbVal" class="db-live-val">42</span>
+                <span class="db-unit">dB</span>
+              </div>
+            </div>
+            <span id="dbBadge" class="badge badge-green db-level-badge">SAFE AMBIENT</span>
+          </div>
+
+          <div class="canvas-container">
+            <canvas id="acousticCanvas"></canvas>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <button id="enableMicBtn" class="btn btn-secondary btn-sm">
+              🎙️ Use Live Microphone
+            </button>
+            <span style="font-size:0.8rem;color:var(--text-muted);">Red dashed line = Trigger Level</span>
+          </div>
+
+          <!-- Environmental Sound Presets -->
+          <div>
+            <span style="font-size:0.85rem;color:var(--text-secondary);font-weight:700;display:block;margin-bottom:0.5rem;">
+              Simulate Sound Environment:
+            </span>
+            <div class="sound-presets-grid">
+              <button class="preset-chip active" data-db="42">📖 Library (42dB)</button>
+              <button class="preset-chip" data-db="64">☕ Cafe (64dB)</button>
+              <button class="preset-chip" data-db="76">🚗 Traffic (76dB)</button>
+              <button class="preset-chip" data-db="94">🚨 Scream (94dB)</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sensitivity Calibrator Controls -->
+        <div class="glass-card" style="display:flex;flex-direction:column;gap:1.5rem;">
+          <h3 style="font-size:1.35rem;">Acoustic Trigger Threshold</h3>
+          <p style="font-size:0.95rem;color:var(--text-secondary);">
+            Adjust the seeker slider to match your surrounding noise level. When acoustic intensity exceeds this value, NariShakti SOS initiates the emergency safety sequence.
+          </p>
+
+          <div class="threshold-slider-group">
+            <div class="slider-labels">
+              <span class="slider-label-title">Detection Threshold</span>
+              <span id="sliderValDisplay" class="slider-label-val">80 dB</span>
+            </div>
+            <input type="range" id="sensitivitySlider" class="custom-range" min="40" max="100" value="80" step="1">
+            <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:var(--text-muted);font-weight:700;">
+              <span>40 dB (Whisper/Quiet)</span>
+              <span>70 dB (Moderate)</span>
+              <span>100 dB (Extreme Shout)</span>
+            </div>
+          </div>
+
+          <div style="background:var(--bg-elevated);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:1.2rem;">
+            <div style="font-size:0.8rem;font-weight:800;color:var(--royal-purple-light);text-transform:uppercase;margin-bottom:0.3rem;">
+              ENVIRONMENTAL GUIDANCE
+            </div>
+            <p id="thresholdAdvice" style="font-size:0.92rem;color:var(--text-primary);margin:0;">
+              Loud Environment: Recommended for crowded transit, concerts, or heavy traffic.
+            </p>
+          </div>
+
+          <div style="display:flex;gap:1rem;align-items:center;background:rgba(140,0,227,0.08);padding:1rem;border-radius:var(--radius-md);border:1px solid rgba(140,0,227,0.2);">
+            <span style="font-size:1.5rem;">⚡</span>
+            <span style="font-size:0.85rem;color:var(--text-secondary);">
+              <strong>Zero False Alarms:</strong> Combined with TensorFlow Lite multi-frame audio classification to reject normal speech and loud music.
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Safety Tools Sandbox -->
+  <section id="safety-tools" class="tools-sandbox-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Interactive Tools</span>
+        <h2 class="section-title">Built-In Safety Toolkit</h2>
+        <p class="section-desc">
+          Discreet escape mechanisms, automated commute timers, and physical motion triggers engineered for real-life safety situations.
+        </p>
+      </div>
+
+      <!-- Tool Switcher Tabs -->
+      <div class="tools-tabs-nav">
+        <button class="tool-tab-btn active" data-tab="tab-fakecall">📞 Fake Call Simulator</button>
+        <button class="tool-tab-btn" data-tab="tab-safewalk">🚶 Safe Walk Timer</button>
+        <button class="tool-tab-btn" data-tab="tab-shakesos">⚡ Shake-to-SOS</button>
+        <button class="tool-tab-btn" data-tab="tab-silentsos">🤫 Silent SOS Mode</button>
+      </div>
+
+      <!-- Tab Pane 1: Fake Call Simulator -->
+      <div id="tab-fakecall" class="tool-tab-pane active">
+        <div class="fake-call-card">
+          <div class="fake-caller-avatar">👤</div>
+          <div style="text-align:center;">
+            <div class="fake-caller-name">Home / Mom</div>
+            <div id="fakeCallStatus" class="fake-call-status">Incoming Call...</div>
+          </div>
+
+          <div class="fake-call-actions">
+            <button id="btnDeclineFakeCall" class="fake-action-btn btn-call-decline" title="Decline Call">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>
+            </button>
+            <button id="btnAcceptFakeCall" class="fake-action-btn btn-call-accept" title="Accept Call">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.44-5.15-3.75-6.59-6.59l1.97-1.57c.27-.27.36-.66.25-1.01A11.36 11.36 0 018.57 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.57c0-.55-.45-1-.99-1.05z"/></svg>
+            </button>
+          </div>
+
+          <p style="font-size:0.85rem;color:#8E8E93;text-align:center;margin-top:1rem;">
+            Schedule an authentic simulated incoming call from Settings or via one-tap trigger to gracefully exit uncomfortable conversations or threatening encounters.
+          </p>
+        </div>
+      </div>
+
+      <!-- Tab Pane 2: Safe Walk Timer -->
+      <div id="tab-safewalk" class="tool-tab-pane">
+        <div class="glass-card safewalk-box">
+          <h3 style="font-size:1.4rem;">Safe Walk Commute Guardian</h3>
+          <p style="font-size:0.95rem;color:var(--text-secondary);">
+            Heading home late? Select your estimated walk duration. If you don't check in or enter your safe pin before time runs out, emergency contacts are alerted with your live location.
+          </p>
+
+          <div id="safeWalkTimerDisplay" class="safewalk-timer-display">15:00</div>
+
+          <div class="safewalk-chips">
+            <button class="safewalk-chip" data-mins="5">5 min</button>
+            <button class="safewalk-chip active" data-mins="15">15 min</button>
+            <button class="safewalk-chip" data-mins="30">30 min</button>
+            <button class="safewalk-chip" data-mins="60">60 min</button>
+          </div>
+
+          <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+            <button id="btnStartSafeWalk" class="btn btn-primary">Start Safe Walk Timer</button>
+            <button id="btnCheckinSafeWalk" class="btn btn-secondary">✓ Check In (I'm Safe)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Pane 3: Shake-to-SOS -->
+      <div id="tab-shakesos" class="tool-tab-pane">
+        <div class="glass-card shake-sandbox-card">
+          <div id="shakeIconBox" class="shake-icon-box">📱</div>
+          <h3 style="font-size:1.4rem;">Physical Motion Trigger (Shake-to-SOS)</h3>
+          <p style="font-size:0.95rem;color:var(--text-secondary);max-width:440px;">
+            In high-stress situations where unlocking your phone is impossible, vigorously shaking the device initiates the SOS protocol. Advanced accelerometer filtering prevents accidental pocket triggers.
+          </p>
+          <button id="btnSimulateShake" class="btn btn-emergency">
+            ⚡ Simulate Rapid Device Shake
+          </button>
+          <span style="font-size:0.8rem;color:var(--text-muted);">
+            *Tip: On mobile devices with motion sensors enabled, shaking your phone directly tests this feature!
+          </span>
+        </div>
+      </div>
+
+      <!-- Tab Pane 4: Silent SOS Mode -->
+      <div id="tab-silentsos" class="tool-tab-pane">
+        <div class="glass-card" style="max-width:680px;margin:0 auto;display:flex;flex-direction:column;gap:1.5rem;">
+          <h3 style="font-size:1.4rem;text-align:center;">Discreet / Stealth Safety Mode</h3>
+          <p style="text-align:center;font-size:0.95rem;color:var(--text-secondary);">
+            Compare how NariShakti SOS handles overt emergencies versus high-discretion scenarios.
+          </p>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+            <div style="background:var(--bg-elevated);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:1.25rem;">
+              <span class="badge badge-red" style="margin-bottom:0.75rem;">Standard Mode</span>
+              <ul style="list-style:none;display:flex;flex-direction:column;gap:0.5rem;font-size:0.88rem;color:var(--text-secondary);">
+                <li>🔊 100% Volume Forced Siren</li>
+                <li>🔦 High-Strobe LED Flashlight</li>
+                <li>📍 Fresh GPS Coordinates SMS</li>
+                <li>🎙️ Proof-of-Event Recording</li>
+              </ul>
+            </div>
+
+            <div style="background:var(--bg-elevated);border:1px solid var(--royal-purple-light);border-radius:var(--radius-md);padding:1.25rem;">
+              <span class="badge badge-purple" style="margin-bottom:0.75rem;">Silent SOS Mode</span>
+              <ul style="list-style:none;display:flex;flex-direction:column;gap:0.5rem;font-size:0.88rem;color:var(--text-secondary);">
+                <li>🔇 Zero Audible Siren (100% Silent)</li>
+                <li>🌑 No Camera Strobe Signaling</li>
+                <li>📍 High-Precision GPS SMS Dispatched</li>
+                <li>🎙️ Stealth Background Audio Log</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Core Features Grid -->
+  <section id="features" class="features-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Comprehensive Protection</span>
+        <h2 class="section-title">Built with Zero Compromises on Safety</h2>
+        <p class="section-desc">
+          Every feature in NariShakti SOS is engineered for resilience, speed, and privacy under high-stress emergency conditions.
+        </p>
+      </div>
+
+      <div class="features-grid">
+        <!-- 1 -->
+        <div class="glass-card feature-card">
+          <div class="feature-icon-box">🎙️</div>
+          <h3 class="feature-title">AI Audio & Scream Classification</h3>
+          <p class="feature-desc">
+            Edge TensorFlow Lite model constantly monitors sound envelopes for high-pitched screaming and distress acoustics with zero cloud latency.
+          </p>
+        </div>
+
+        <!-- 2 -->
+        <div class="glass-card feature-card">
+          <div class="feature-icon-box">📍</div>
+          <h3 class="feature-title">Live GPS Tracking & SMS Beacon</h3>
+          <p class="feature-desc">
+            Automatically sends periodic SMS messages with high-precision Google Maps location pins and battery level to your emergency contacts.
+          </p>
+        </div>
+
+        <!-- 3 -->
+        <div class="glass-card feature-card">
+          <div class="feature-icon-box">⚡</div>
+          <h3 class="feature-title">Motion SOS (Shake-to-Trigger)</h3>
+          <p class="feature-desc">
+            Vigorously shaking the smartphone triggers immediate dispatch without requiring screen unlock, backed by false-positive walk filtering.
+          </p>
+        </div>
+
+        <!-- 4 -->
+        <div class="glass-card feature-card">
+          <div class="feature-icon-box">⏱️</div>
+          <h3 class="feature-title">Safe Walk Commute Timer</h3>
+          <p class="feature-desc">
+            Set custom arrival windows for late commutes. If a check-in is missed, the app initiates the automated emergency protocol.
+          </p>
+        </div>
+
+        <!-- 5 -->
+        <div class="glass-card feature-card">
+          <div class="feature-icon-box">📞</div>
+          <h3 class="feature-title">Simulated Fake Call Tool</h3>
+          <p class="feature-desc">
+            Generates realistic incoming caller screens with audio to provide an authentic, graceful escape pretext from uncomfortable situations.
+          </p>
+        </div>
+
+        <!-- 6 -->
+        <div class="glass-card feature-card">
+          <div class="feature-icon-box">🔋</div>
+          <h3 class="feature-title">Low Battery Emergency Guardian</h3>
+          <p class="feature-desc">
+            Automatically notifies your trusted circle with your last known location whenever the phone battery drops critically below 5%.
+          </p>
+        </div>
+
+        <!-- 7 -->
+        <div class="glass-card feature-card">
+          <div class="feature-icon-box">🎙️</div>
+          <h3 class="feature-title">Proof-of-Event Audio Recording</h3>
+          <p class="feature-desc">
+            Captures and securely stores ambient environmental audio during an emergency to preserve tamper-proof evidence.
+          </p>
+        </div>
+
+        <!-- 8 -->
+        <div class="glass-card feature-card">
+          <div class="feature-icon-box">🎨</div>
+          <h3 class="feature-title">Material 3 Royal Purple UI</h3>
+          <p class="feature-desc">
+            Sleek, fluid Jetpack Compose UI with adaptive system dark and light modes, high-contrast haptic toggles, and seamless ergonomics.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture & How It Works -->
+  <section id="how-it-works" class="protocol-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">System Architecture</span>
+        <h2 class="section-title">How the Emergency Protocol Executes</h2>
+        <p class="section-desc">
+          From acoustic wave capture to multi-vector beaconing, review the automated lifecycle of an emergency event.
+        </p>
+      </div>
+
+      <div class="flow-steps-grid">
+        <!-- Step 1 -->
+        <div class="glass-card flow-step-card">
+          <span class="step-number">01</span>
+          <h4 class="step-title">Acoustic Sampling</h4>
+          <p class="step-desc">
+            Android Foreground Service samples audio streams via AudioRecord without storing raw audio, converting PCM buffers into decibel amplitudes.
+          </p>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="glass-card flow-step-card">
+          <span class="step-number">02</span>
+          <h4 class="step-title">Edge AI Inference</h4>
+          <p class="step-desc">
+            TensorFlow Lite analyzes audio spectra against calibrated decibel thresholds (40dB–100dB) to detect distress patterns within milliseconds.
+          </p>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="glass-card flow-step-card">
+          <span class="step-number">03</span>
+          <h4 class="step-title">5-Second Grace Buffer</h4>
+          <p class="step-desc">
+            Continuous haptic vibration and visible countdown modal give the user 5 seconds to tap "I AM SAFE" and prevent accidental false alarms.
+          </p>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="glass-card flow-step-card">
+          <span class="step-number">04</span>
+          <h4 class="step-title">Multi-Vector Dispatch</h4>
+          <p class="step-desc">
+            SmsManager sends Google Maps coordinates, AudioRecord captures incident evidence, and ToneGenerator sounds 100% volume alarm siren.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Permissions & Privacy -->
+  <section id="permissions" class="permissions-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Privacy & Security</span>
+        <h2 class="section-title">Transparent Permission Breakdown</h2>
+        <p class="section-desc">
+          NariShakti SOS is built on a strict zero-telemetry philosophy. Here is why each Android permission is required.
+        </p>
+      </div>
+
+      <div class="permissions-grid">
+        <div class="glass-card permission-card">
+          <span class="perm-tag">RECORD_AUDIO</span>
+          <h4 style="font-size:1.1rem;font-weight:700;">Real-Time Audio Analysis</h4>
+          <p style="font-size:0.9rem;color:var(--text-secondary);">
+            Required to calculate ambient decibels and classify distress acoustics locally. Audio is processed on-device in RAM and never uploaded to any remote server.
+          </p>
+        </div>
+
+        <div class="glass-card permission-card">
+          <span class="perm-tag">ACCESS_FINE_LOCATION</span>
+          <h4 style="font-size:1.1rem;font-weight:700;">High-Accuracy GPS Fix</h4>
+          <p style="font-size:0.9rem;color:var(--text-secondary);">
+            Required to obtain fresh latitude and longitude coordinates and generate Google Maps navigation links for SMS distress beacons.
+          </p>
+        </div>
+
+        <div class="glass-card permission-card">
+          <span class="perm-tag">SEND_SMS</span>
+          <h4 style="font-size:1.1rem;font-weight:700;">Direct Carrier Alerts</h4>
+          <p style="font-size:0.9rem;color:var(--text-secondary);">
+            Dispatches urgent text messages directly through your mobile network carrier to your trusted circle, functioning even without mobile data/internet.
+          </p>
+        </div>
+
+        <div class="glass-card permission-card">
+          <span class="perm-tag">CAMERA</span>
+          <h4 style="font-size:1.1rem;font-weight:700;">Strobe Distress Light</h4>
+          <p style="font-size:0.9rem;color:var(--text-secondary);">
+            Required exclusively for controlling the rear camera LED flash unit as a high-visibility SOS beacon in darkness. No photo or video frames are captured.
+          </p>
+        </div>
+      </div>
+
+      <div class="privacy-banner">
+        <div class="privacy-banner-icon">🛡️</div>
+        <div class="privacy-banner-text">
+          <h3>100% On-Device Privacy Guarantee</h3>
+          <p style="color:var(--text-secondary);font-size:0.95rem;margin:0;">
+            NariShakti SOS is 100% open-source software under the MIT License. It does not contain third-party trackers, analytics SDKs, advertising frameworks, or cloud database syncs. Your voice, location, and contacts never leave your device.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Version History & Changelog -->
+  <section id="changelog" class="changelog-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Release Timeline</span>
+        <h2 class="section-title">Version History & Changelog</h2>
+        <p class="section-desc">
+          Follow the rapid evolution and feature milestones of NariShakti SOS from initial prototype to production v5.5.0.
+        </p>
+      </div>
+
+      <div class="changelog-filter-nav">
+        <button class="changelog-filter-btn active" data-filter="all">All Releases</button>
+        <button class="changelog-filter-btn" data-filter="major">Major Updates</button>
+        <button class="changelog-filter-btn" data-filter="sensors">Sensors & AI</button>
+        <button class="changelog-filter-btn" data-filter="ui">UI & UX</button>
+      </div>
+
+      <div class="changelog-timeline">
+        <!-- v5.5.0 -->
+        <div class="glass-card changelog-card" data-category="major sensors ui">
+          <div class="changelog-card-header">
+            <span class="version-tag">v5.5.0 — Live Tracking & Sensitivity Calibration</span>
+            <span class="badge badge-purple">Latest Release</span>
+          </div>
+          <ul class="version-bullets">
+            <li><strong>Live Location Emergency Tracking:</strong> Periodic SMS updates with fresh GPS pin, accuracy radius, and battery percentage.</li>
+            <li><strong>Audio Detection Sensitivity Slider:</strong> Calibrate threshold from 40 dB to 100 dB with dynamic environmental guidance.</li>
+            <li><strong>Dynamic Theme Engine:</strong> Full reactive theme system supporting System, Light, and Dark modes with Material 3 Royal Purple.</li>
+          </ul>
+        </div>
+
+        <!-- v3.0.0 -->
+        <div class="glass-card changelog-card" data-category="major">
+          <div class="changelog-card-header">
+            <span class="version-tag">v3.0.0 — The Update Update</span>
+            <span class="badge badge-blue">OTA System</span>
+          </div>
+          <ul class="version-bullets">
+            <li><strong>Automatic Updates:</strong> Check for and install new app releases directly from the Settings menu.</li>
+            <li><strong>Enhanced Security:</strong> Integrated FileProvider for secure APK installation handling.</li>
+            <li><strong>Foreground Service Reliability:</strong> Enhanced lifecycle resilience for long-term background monitoring.</li>
+          </ul>
+        </div>
+
+        <!-- v2.0.2 -->
+        <div class="glass-card changelog-card" data-category="ui">
+          <div class="changelog-card-header">
+            <span class="version-tag">v2.0.2 — Maintenance & UX</span>
+            <span class="badge badge-green">UX Polish</span>
+          </div>
+          <ul class="version-bullets">
+            <li><strong>Stop Alarm Option:</strong> Dedicated button to silence siren once safe without stopping live location session.</li>
+            <li><strong>Improved UI States:</strong> Clearer visual indicators and status cards when safety monitoring is active.</li>
+          </ul>
+        </div>
+
+        <!-- v2.0.0 -->
+        <div class="glass-card changelog-card" data-category="major sensors">
+          <div class="changelog-card-header">
+            <span class="version-tag">v2.0.0 — Major Feature Expansion</span>
+            <span class="badge badge-purple">Milestone</span>
+          </div>
+          <ul class="version-bullets">
+            <li><strong>Voice SOS:</strong> Trigger emergency protocols with vocal keywords.</li>
+            <li><strong>Silent SOS Mode:</strong> Discreet location and SMS alerts without audible siren or strobe flash.</li>
+            <li><strong>Safe Walk Timer & Fake Call:</strong> Integrated proactive commute countdown and caller simulator.</li>
+            <li><strong>Low Battery Guardian:</strong> Automated SMS alert dispatched when battery drops below 5%.</li>
+            <li><strong>Proof-of-Event:</strong> Automatic evidence audio capture during active emergency sessions.</li>
+          </ul>
+        </div>
+
+        <!-- v1.7.0 & v1.6.0 -->
+        <div class="glass-card changelog-card" data-category="ui sensors">
+          <div class="changelog-card-header">
+            <span class="version-tag">v1.7.0 & v1.6.0 — Compose Redesign & Shake Trigger</span>
+            <span class="badge badge-blue">Sensors</span>
+          </div>
+          <ul class="version-bullets">
+            <li><strong>Jetpack Compose Migration:</strong> Modernized interface with Material 3 design system and pulsing action toggles.</li>
+            <li><strong>Shake-to-SOS:</strong> Accelerometer gesture trigger with false-positive walk filtering.</li>
+          </ul>
+        </div>
+
+        <!-- v1.0.0 - v1.4.0 -->
+        <div class="glass-card changelog-card" data-category="sensors">
+          <div class="changelog-card-header">
+            <span class="version-tag">v1.0.0 - v1.4.0 — Foundations & Customization</span>
+            <span class="badge badge-green">Foundation</span>
+          </div>
+          <ul class="version-bullets">
+            <li>Core safety monitoring service with AI audio classification and countdown haptics.</li>
+            <li>High-intensity forced alarm volume (100%) and multi-provider GPS fixes.</li>
+            <li>Trusted Contacts circle manager with direct carrier SMS dispatch.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Download & Sideloading Guide -->
+  <section id="download" class="download-section">
+    <div class="container">
+      <div class="download-cta-box">
+        <span class="badge badge-purple" style="margin-bottom:1rem;">Ready for Android 8.0+</span>
+        <h2 class="download-title">Empower Your Personal Safety Today</h2>
+        <p class="download-subtitle">
+          Download the latest pre-compiled APK from GitHub Releases or inspect and build from the open-source Kotlin codebase.
+        </p>
+
+        <div class="download-buttons">
+          <a href="https://github.com/rahibladex/AcousticGuard/releases" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-lg">
+            📥 Download APK (v5.5.0)
+          </a>
+          <a href="https://github.com/rahibladex/AcousticGuard" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-lg">
+            ⭐ Star on GitHub
+          </a>
+        </div>
+
+        <!-- Sideloading Step-by-Step Guide -->
+        <div class="sideload-steps-grid">
+          <div class="sideload-step">
+            <span class="sideload-num">01</span>
+            <h4 style="font-size:1.05rem;font-weight:700;">Download APK</h4>
+            <p style="font-size:0.85rem;color:var(--text-secondary);">
+              Get the latest <code>app-release.apk</code> file directly from the GitHub Releases page on your Android device.
+            </p>
+          </div>
+
+          <div class="sideload-step">
+            <span class="sideload-num">02</span>
+            <h4 style="font-size:1.05rem;font-weight:700;">Allow Unknown Sources</h4>
+            <p style="font-size:0.85rem;color:var(--text-secondary);">
+              In Android Settings, toggle "Allow installation of apps from unknown sources" for your browser/file manager.
+            </p>
+          </div>
+
+          <div class="sideload-step">
+            <span class="sideload-num">03</span>
+            <h4 style="font-size:1.05rem;font-weight:700;">Grant Permissions</h4>
+            <p style="font-size:0.85rem;color:var(--text-secondary);">
+              Open NariShakti SOS and permit Microphone, Location, and SMS access for emergency functions to operate.
+            </p>
+          </div>
+
+          <div class="sideload-step">
+            <span class="sideload-num">04</span>
+            <h4 style="font-size:1.05rem;font-weight:700;">Add Circle & Calibrate</h4>
+            <p style="font-size:0.85rem;color:var(--text-secondary);">
+              Add trusted phone numbers and adjust your decibel sensitivity slider for daily commute protection.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive FAQ Accordion -->
+  <section id="faq" class="faq-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Common Questions</span>
+        <h2 class="section-title">Frequently Asked Questions</h2>
+        <p class="section-desc">
+          Everything you need to know about battery consumption, privacy, and emergency mechanics.
+        </p>
+      </div>
+
+      <div class="faq-list">
+        <div class="faq-item">
+          <button class="faq-question">
+            <span>Does background audio monitoring drain my battery?</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>NariShakti SOS is optimized using Android Foreground Services and low-overhead audio buffer sampling. Rather than running power-hungry models continuously, it uses lightweight decibel threshold triggers before running deeper classification, keeping battery consumption to a minimal 2-4% over typical daily commutes.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span>Does NariShakti SOS require an active internet connection?</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>No! The core AI audio detection, scream classification, accelerometer shake detection, and emergency dispatch work 100% offline. Emergency alerts are transmitted directly through carrier SMS with GPS hardware coordinates, ensuring reliability in areas without mobile data coverage.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span>How do I prevent false alarms if someone shouts or drops something?</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>NariShakti SOS provides multiple layers of safety: first, you can customize the sensitivity threshold (40dB to 100dB) from the Settings screen. Second, every emergency trigger initiates a 5-second vibration countdown modal with a prominent "I AM SAFE" button to easily dismiss inadvertent triggers before SMS is dispatched.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span>Is my audio or location data stored or sent anywhere?</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>Never. The app contains zero analytics, trackers, or external cloud endpoints. All audio is processed purely in volatile device RAM, and location coordinates are only packaged into SMS text messages sent directly to numbers you have chosen.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span>How can I contribute to or build the app from source?</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>Clone the repository from GitHub (<code>git clone https://github.com/rahibladex/AcousticGuard.git</code>), open the project in Android Studio (Giraffe or newer with Kotlin/Compose support), and build the project using Gradle. Pull requests and feature contributions are welcome under the MIT License!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand-col">
+          <a href="#" class="brand">
+            <img src="assets/app_logo.png" alt="NariShakti SOS Logo" class="brand-icon">
+            <span class="brand-name">NariShakti<span>SOS</span></span>
+          </a>
+          <p style="font-size:0.9rem;color:var(--text-secondary);max-width:320px;">
+            AI-powered personal safety and emergency audio detection for Android. Free, private, and open source under the MIT License.
+          </p>
+          <div style="display:flex;gap:0.75rem;margin-top:0.5rem;">
+            <span class="badge badge-purple">Kotlin</span>
+            <span class="badge badge-blue">TensorFlow Lite</span>
+            <span class="badge badge-green">Material 3</span>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="footer-title">Navigation</h4>
+          <ul class="footer-links">
+            <li><a href="#features" class="footer-link">Core Features</a></li>
+            <li><a href="#acoustic-lab" class="footer-link">Sensitivity Lab</a></li>
+            <li><a href="#safety-tools" class="footer-link">Safety Tools</a></li>
+            <li><a href="#how-it-works" class="footer-link">Architecture Flow</a></li>
+            <li><a href="#changelog" class="footer-link">Changelog</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-title">Open Source</h4>
+          <ul class="footer-links">
+            <li><a href="https://github.com/rahibladex/AcousticGuard" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub Repository</a></li>
+            <li><a href="https://github.com/rahibladex/AcousticGuard/releases" target="_blank" rel="noopener noreferrer" class="footer-link">Releases (APKs)</a></li>
+            <li><a href="https://github.com/rahibladex/AcousticGuard/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" class="footer-link">MIT License</a></li>
+            <li><a href="https://github.com/rahibladex/AcousticGuard/issues" target="_blank" rel="noopener noreferrer" class="footer-link">Issue Tracker</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-title">Legal & Notice</h4>
+          <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.5;">
+            NariShakti SOS is an auxiliary personal safety utility. In immediate life-threatening situations, always dial your local emergency services (112 / 911 / 100) first.
+          </p>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>© 2026 NariShakti SOS (AcousticGuard). Open source under MIT License.</span>
+        <span>Crafted for safety & community protection.</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application Logic -->
+  <script src="js/app.js"></script>
+</body>
+</html>

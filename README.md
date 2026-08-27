@@ -12,6 +12,8 @@ NariShakti SOS is an open-source Android application designed for personal safet
   - **Safe Walk Timer**: A countdown timer that triggers SOS if not checked-in or cancelled.
 - **Automated Alerts**:
   - **High-Intensity Alarm**: Forces system alarm volume to 100% for audible distress.
+  - **Remote Alarm Sync**: Automatically triggers a loud alarm on a trusted contact's phone (even if silent) when you are in danger (requires TEJASHWINI app on both devices).
+  - **Automatic Emergency Call**: Automatically initiates a phone call to your primary trusted contact when an SOS is triggered.
   - **Proof-of-Event**: Automatically records audio during an emergency for evidence.
   - **Low Battery SOS**: Notifies contacts when the battery drops below 5%.
   - **Location Sharing**: Sends fresh high-accuracy GPS coordinates via SMS.
@@ -31,6 +33,12 @@ You can download the latest APK from the [Releases](https://github.com/rahiblade
 - **Foreground Services**: Ensuring reliable background monitoring.
 
 ## Version History
+
+### v6.0.0 (The Sync & Call Update)
+- **Remote Alarm Sync**: Introduced a high-priority SOS trigger that rings a trusted contact's phone even if it's on **Silent** or **Vibrate** (requires `RECEIVE_SMS` permission).
+- **Automatic Emergency Call**: The app now automatically initiates a phone call to the first trusted contact when an emergency is detected.
+- **Enhanced Privacy**: Added settings toggles for Remote Alarm and Automatic Calling.
+- **Permission Updates**: Integrated `CALL_PHONE` and `RECEIVE_SMS` workflows.
 
 ### v3.0.0 (The Update Update)
 - **Automatic Updates**: Check for and install the latest app versions directly from the Settings menu.
@@ -85,7 +93,10 @@ You can download the latest APK from the [Releases](https://github.com/rahiblade
 - `RECORD_AUDIO`: For real-time sound monitoring.
 - `ACCESS_FINE_LOCATION`: To send accurate coordinates during an emergency.
 - `SEND_SMS`: To notify your trusted contacts.
+- `RECEIVE_SMS`: To detect remote SOS triggers from trusted contacts.
+- `CALL_PHONE`: To automatically call emergency contacts.
 - `CAMERA`: To use the flashlight for distress signaling.
+- `MODIFY_AUDIO_SETTINGS`: To override silent mode for emergency alerts.
 
 ## License
 

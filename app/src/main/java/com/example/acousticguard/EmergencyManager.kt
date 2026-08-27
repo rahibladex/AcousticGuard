@@ -2,6 +2,7 @@ package com.example.acousticguard
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.media.MediaRecorder
@@ -56,6 +57,10 @@ class EmergencyManager(private val context: Context) {
             }
         }
 
+        if (prefs.getBoolean("emergency_call", true)) {
+            makeEmergencyCall()
+        }
+
         startAudioRecording()
         
         // Start periodic live location updates
@@ -79,6 +84,42 @@ class EmergencyManager(private val context: Context) {
         stopFlashlight()
         stopAudioRecording()
         handler.removeCallbacks(liveLocationRunnable)
+    }
+
+    fun startRemoteAlarm() {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        
+        // Force alarm stream to max volume
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+        audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
+        
+        // Trigger the standard alarm logic
+        startAlarm()
+        
+        Log.i("EmergencyManager", "Remote Alarm triggered and volume forced to max.")
+    }
+
+    private fun makeEmergencyCall() {
+        val prefs = context.getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
+        val contacts = prefs.getStringSet("trusted_contacts", setOf()) ?: setOf()
+        
+        val primaryContact = contacts.firstOrNull()
+        if (primaryContact != null) {
+            try {
+                val intent = Intent(Intent.ACTION_CALL).apply {
+                    data = Uri.parse("tel:$primaryContact")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
+                Log.i("EmergencyManager", "Emergency call initiated to $primaryContact")
+            } catch (e: SecurityException) {
+                Log.e("EmergencyManager", "Permission denied for CALL_PHONE", e)
+            } catch (e: Exception) {
+                Log.e("EmergencyManager", "Failed to initiate call", e)
+            }
+        } else {
+            Log.w("EmergencyManager", "No trusted contact found for automatic call.")
+        }
     }
 
     fun toggleAlarm() {
@@ -186,7 +227,8 @@ class EmergencyManager(private val context: Context) {
     }
 
     private fun sendEmergencySms(mapsLink: String) {
-        sendCustomSms("EMERGENCY LIVE LOCATION! I need help. My current position: $mapsLink (This link will be updated every 2 mins)")
+        val trigger = RemoteSmsReceiver.TRIGGER_KEYWORD
+        sendCustomSms("EMERGENCY LIVE LOCATION! I need help. My current position: $mapsLink (This link will be updated every 2 mins) $trigger")
     }
 
     fun sendCustomSms(message: String) {

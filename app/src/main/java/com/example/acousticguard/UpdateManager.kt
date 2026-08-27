@@ -83,7 +83,7 @@ class UpdateManager(private val context: Context) {
 
     fun downloadAndInstall(downloadUrl: String) {
         val request = DownloadManager.Request(Uri.parse(downloadUrl))
-            .setTitle("NariShakti SOS Update")
+            .setTitle("TEJASHWINI Update")
             .setDescription("Downloading latest version...")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, "NariShaktiSOS-Update.apk")

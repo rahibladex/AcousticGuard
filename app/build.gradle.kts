@@ -11,8 +11,8 @@ android {
         applicationId = "com.example.acousticguard"
         minSdk = 24
         targetSdk = 34
-        versionCode = 18
-        versionName = "5.2.0"
+        versionCode = 20
+        versionName = "6.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -64,6 +64,9 @@ dependencies {
     
     // Glide for image processing
     implementation("com.github.bumptech.glide:glide:4.16.0")
+    
+    // Google Play Services Location for Accurate GPS Tracking
+    implementation("com.google.android.gms:play-services-location:21.2.0")
     
     // TensorFlow Lite
     implementation("org.tensorflow:tensorflow-lite:2.16.1")

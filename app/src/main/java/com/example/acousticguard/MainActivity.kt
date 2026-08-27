@@ -73,6 +73,7 @@ class MainActivity : ComponentActivity() {
     
     private var isSafeWalkActive by mutableStateOf(false)
     private var safeWalkRemainingTime by mutableStateOf("15:00")
+    private var safeWalkConfiguredDuration by mutableIntStateOf(15)
     private var safeWalkTimer: CountDownTimer? = null
 
     private val audioUpdateReceiver = object : BroadcastReceiver() {
@@ -120,6 +121,7 @@ class MainActivity : ComponentActivity() {
     private fun loadSettings() {
         val prefs = getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
         trustedContacts = prefs.getStringSet("trusted_contacts", setOf()) ?: setOf()
+        safeWalkConfiguredDuration = prefs.getInt("safe_walk_duration", 15)
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -130,7 +132,7 @@ class MainActivity : ComponentActivity() {
             topBar = {
                 CenterAlignedTopAppBar(
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
-                    title = { Text("NariShakti SOS", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = TextPrimary) },
+                    title = { Text("TEJASHWINI", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = TextPrimary) },
                     actions = {
                         IconButton(onClick = { 
                             startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
@@ -221,10 +223,10 @@ class MainActivity : ComponentActivity() {
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        painter = painterResource(id = R.drawable.ic_shield),
+                        painter = painterResource(id = R.drawable.app_logo),
                         contentDescription = null,
                         modifier = Modifier.size(50.dp),
-                        tint = RoyalPurple
+                        tint = Color.Unspecified
                     )
                 }
                 Text(
@@ -371,7 +373,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 ToolButton(
                     modifier = Modifier.weight(1f),
-                    text = if (isSafeWalkActive) safeWalkRemainingTime else "Safe Walk",
+                    text = if (isSafeWalkActive) safeWalkRemainingTime else "Safe Walk (${safeWalkConfiguredDuration}m)",
                     icon = Icons.Default.Timer,
                     onClick = { if (isSafeWalkActive) stopSafeWalkTimer() else startSafeWalkTimer() }
                 )
@@ -651,7 +653,9 @@ class MainActivity : ComponentActivity() {
         val permissions = mutableListOf(
             Manifest.permission.RECORD_AUDIO,
             Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.SEND_SMS
+            Manifest.permission.SEND_SMS,
+            Manifest.permission.RECEIVE_SMS,
+            Manifest.permission.CALL_PHONE
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
@@ -665,7 +669,9 @@ class MainActivity : ComponentActivity() {
         val permissions = mutableListOf(
             Manifest.permission.RECORD_AUDIO,
             Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.SEND_SMS
+            Manifest.permission.SEND_SMS,
+            Manifest.permission.RECEIVE_SMS,
+            Manifest.permission.CALL_PHONE
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
@@ -715,6 +721,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        loadSettings()
         val filter = IntentFilter().apply {
             addAction(AudioDetectionService.ACTION_AUDIO_UPDATE)
             addAction(AudioDetectionService.ACTION_EMERGENCY_CONFIRM)
