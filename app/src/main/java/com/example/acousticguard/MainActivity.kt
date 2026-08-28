@@ -106,11 +106,20 @@ class MainActivity : ComponentActivity() {
         emergencyManager = EmergencyManager(this)
         loadSettings()
 
+        val prefs = getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
+        val themeMode = prefs.getInt("theme_mode", 0)
+
         setContent {
-            NariShaktiSOSTheme {
+            val darkTheme = when (themeMode) {
+                1 -> false
+                2 -> true
+                else -> isSystemInDarkTheme()
+            }
+
+            NariShaktiSOSTheme(darkTheme = darkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = DarkBg
+                    color = MaterialTheme.colorScheme.background
                 ) {
                     MainScreenContent()
                 }

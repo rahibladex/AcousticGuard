@@ -34,6 +34,11 @@ You can download the latest APK from the [Releases](https://github.com/rahiblade
 
 ## Version History
 
+### v6.1.0 (The Stability & UI Fix)
+- **Theme Fixes**: Migrated theme switching to fully Compose-native state. Fixed issue where Light/Dark mode would not update instantly.
+- **Improved Startup**: Enhanced activity initialization to prevent black screens and ANR (Application Not Responding) issues on some devices.
+- **Gradle Recovery**: Restored missing Gradle wrapper files for better project portability.
+
 ### v6.0.0 (The Sync & Call Update)
 - **Remote Alarm Sync**: Introduced a high-priority SOS trigger that rings a trusted contact's phone even if it's on **Silent** or **Vibrate** (requires `RECEIVE_SMS` permission).
 - **Automatic Emergency Call**: The app now automatically initiates a phone call to the first trusted contact when an emergency is detected.

@@ -29,12 +29,26 @@ class SettingsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         setContent {
-            NariShaktiSOSTheme {
+            val prefs = remember { getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE) }
+            var themeMode by remember { 
+                mutableIntStateOf(prefs.getInt("theme_mode", 0)) 
+            }
+
+            val darkTheme = when (themeMode) {
+                1 -> false
+                2 -> true
+                else -> isSystemInDarkTheme()
+            }
+
+            NariShaktiSOSTheme(darkTheme = darkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = DarkBg
+                    color = if (darkTheme) DarkBg else MaterialTheme.colorScheme.background
                 ) {
-                    SettingsScreen()
+                    SettingsScreen(themeMode) { newMode ->
+                        themeMode = newMode
+                        prefs.edit().putInt("theme_mode", newMode).apply()
+                    }
                 }
             }
         }
@@ -42,12 +56,10 @@ class SettingsActivity : ComponentActivity() {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun SettingsScreen() {
+    fun SettingsScreen(currentThemeMode: Int, onThemeChange: (Int) -> Unit) {
         val prefs = remember { getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE) }
         
-        var themeMode by remember { 
-            mutableIntStateOf(prefs.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)) 
-        }
+        var themeMode = currentThemeMode
         var emergencyFlashlight by remember { 
             mutableStateOf(prefs.getBoolean("emergency_flashlight", true)) 
         }
@@ -107,20 +119,14 @@ class SettingsActivity : ComponentActivity() {
                     border = BorderStroke(1.dp, RoyalPurple.copy(alpha = 0.2f))
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        ThemeOption("Follow System", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM, themeMode) {
-                            themeMode = it
-                            prefs.edit().putInt("theme_mode", it).apply()
-                            AppCompatDelegate.setDefaultNightMode(it)
+                        ThemeOption("Follow System", 0, themeMode) {
+                            onThemeChange(it)
                         }
-                        ThemeOption("Light Mode", AppCompatDelegate.MODE_NIGHT_NO, themeMode) {
-                            themeMode = it
-                            prefs.edit().putInt("theme_mode", it).apply()
-                            AppCompatDelegate.setDefaultNightMode(it)
+                        ThemeOption("Light Mode", 1, themeMode) {
+                            onThemeChange(it)
                         }
-                        ThemeOption("Dark Mode", AppCompatDelegate.MODE_NIGHT_YES, themeMode) {
-                            themeMode = it
-                            prefs.edit().putInt("theme_mode", it).apply()
-                            AppCompatDelegate.setDefaultNightMode(it)
+                        ThemeOption("Dark Mode", 2, themeMode) {
+                            onThemeChange(it)
                         }
                     }
                 }
