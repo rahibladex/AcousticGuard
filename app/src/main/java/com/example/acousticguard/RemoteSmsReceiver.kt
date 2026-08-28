@@ -17,30 +17,47 @@ class RemoteSmsReceiver : BroadcastReceiver() {
             val prefs = context.getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
             val isRemoteAlarmEnabled = prefs.getBoolean("allow_remote_alarm", true)
 
-            if (!isRemoteAlarmEnabled) return
+            if (!isRemoteAlarmEnabled) {
+                Log.i("RemoteSmsReceiver", "Remote alarm is disabled in settings.")
+                return
+            }
 
             val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
             for (message in messages) {
-                val body = message.displayMessageBody
-                val sender = message.displayOriginatingAddress
+                val body = message.displayMessageBody ?: continue
+                val sender = message.displayOriginatingAddress ?: "Unknown"
 
-                if (body != null && body.contains(TRIGGER_KEYWORD)) {
-                    Log.i("RemoteSmsReceiver", "SOS Trigger detected from $sender")
-                    
-                    // Verify if sender is a trusted contact (highly recommended)
+                if (body.contains(TRIGGER_KEYWORD)) {
+                    Log.i("RemoteSmsReceiver", "SOS Trigger keyword detected from sender: $sender")
+
                     val trustedContacts = prefs.getStringSet("trusted_contacts", setOf()) ?: setOf()
-                    
-                    // Normalize number for comparison (strip + and spaces if necessary)
-                    val isTrusted = trustedContacts.any { it.replace(" ", "").contains(sender.replace(" ", "").takeLast(10)) }
+                    val senderDigits = sender.filter { it.isDigit() }
+
+                    val isTrusted = if (trustedContacts.isEmpty()) {
+                        // If no specific contacts restricted, allow remote alarm to ring
+                        true
+                    } else {
+                        trustedContacts.any { contact ->
+                            val contactDigits = contact.filter { it.isDigit() }
+                            contactDigits.isNotEmpty() && (
+                                contactDigits == senderDigits ||
+                                (contactDigits.length >= 7 && senderDigits.endsWith(contactDigits.takeLast(10))) ||
+                                (senderDigits.length >= 7 && contactDigits.endsWith(senderDigits.takeLast(10)))
+                            )
+                        }
+                    }
 
                     if (isTrusted) {
-                        val emergencyManager = EmergencyManager(context)
-                        emergencyManager.startRemoteAlarm()
+                        Log.i("RemoteSmsReceiver", "Sender $sender verified. Starting RemoteAlertService loud alarm!")
+                        val mapsUrlRegex = Regex("""https://maps\.google\.com/\?[^\s()]+""")
+                        val mapsUrl = mapsUrlRegex.find(body)?.value ?: ""
+                        RemoteAlertService.startAlert(context, sender, mapsUrl, body)
                     } else {
-                        Log.w("RemoteSmsReceiver", "Trigger received but sender $sender is not in trusted contacts.")
+                        Log.w("RemoteSmsReceiver", "Trigger received but sender $sender did not match configured trusted contacts: $trustedContacts")
                     }
                 }
             }
         }
     }
 }
+

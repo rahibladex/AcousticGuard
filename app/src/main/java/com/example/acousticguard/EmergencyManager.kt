@@ -3,6 +3,7 @@ package com.example.acousticguard
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.media.MediaRecorder
@@ -12,16 +13,26 @@ import android.os.Handler
 import android.os.Looper
 import android.telephony.SmsManager
 import android.util.Log
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 
 class EmergencyManager(private val context: Context) {
 
-    private var toneGen: ToneGenerator? = null
-    var isAlarmActive by mutableStateOf(false)
-        private set
-    private var isFlashActive = false
+    companion object {
+        @Volatile
+        var isAlarmActive = false
+            private set
+
+        @Volatile
+        var isFlashActive = false
+            private set
+
+        private var toneGen: ToneGenerator? = null
+        private var flashThread: Thread? = null
+        private var alarmThread: Thread? = null
+
+        private val flashLock = Any()
+        private val alarmLock = Any()
+    }
+
     private var mediaRecorder: MediaRecorder? = null
     
     private val emergencyLocationManager = EmergencyLocationManager(context)
@@ -75,6 +86,7 @@ class EmergencyManager(private val context: Context) {
             } else {
                 "Location not available"
             }
+            Log.i("EmergencyManager", "updateAndSendLocation: mapsLink=$mapsLink, loc=$location")
             sendEmergencySms(mapsLink)
         }
     }
@@ -131,75 +143,149 @@ class EmergencyManager(private val context: Context) {
     }
 
     fun startAlarm() {
-        if (isAlarmActive) return
-        isAlarmActive = true
-        
-        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
-        audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
-        
-        toneGen = ToneGenerator(AudioManager.STREAM_ALARM, 100)
-        
-        Thread {
-            while (isAlarmActive) {
-                try {
-                    toneGen?.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 1000)
-                    Thread.sleep(1200)
-                } catch (e: Exception) {
-                    break
-                }
+        synchronized(alarmLock) {
+            if (isAlarmActive) return
+            isAlarmActive = true
+            
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
+            
+            try {
+                toneGen?.release()
+                toneGen = ToneGenerator(AudioManager.STREAM_ALARM, 100)
+            } catch (e: Exception) {
+                Log.e("EmergencyManager", "Failed to init ToneGenerator", e)
             }
-        }.start()
-    }
-
-    fun stopAlarm() {
-        isAlarmActive = false
-        toneGen?.stopTone()
-        toneGen?.release()
-        toneGen = null
-    }
-
-    fun startFlashlight() {
-        if (isFlashActive) return
-        isFlashActive = true
-        val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        try {
-            val cameraId = cameraManager.cameraIdList[0]
-            Thread {
-                var toggle = true
-                while (isFlashActive) {
+            
+            val thread = Thread({
+                while (isAlarmActive && !Thread.currentThread().isInterrupted) {
                     try {
-                        cameraManager.setTorchMode(cameraId, toggle)
-                        toggle = !toggle
-                        Thread.sleep(500)
+                        synchronized(alarmLock) {
+                            if (isAlarmActive && toneGen != null) {
+                                toneGen?.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 1000)
+                            }
+                        }
+                        Thread.sleep(1200)
+                    } catch (e: InterruptedException) {
+                        break
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        Log.e("EmergencyManager", "Alarm loop error", e)
                         break
                     }
                 }
-                // Ensure flashlight is off when loop exits
+                synchronized(alarmLock) {
+                    try {
+                        toneGen?.stopTone()
+                        toneGen?.release()
+                    } catch (e: Exception) {}
+                    toneGen = null
+                }
+            }, "EmergencyAlarmThread")
+            thread.isDaemon = true
+            thread.start()
+            alarmThread = thread
+        }
+    }
+
+    fun stopAlarm() {
+        synchronized(alarmLock) {
+            isAlarmActive = false
+            alarmThread?.interrupt()
+            alarmThread = null
+            try {
+                toneGen?.stopTone()
+                toneGen?.release()
+            } catch (e: Exception) {}
+            toneGen = null
+        }
+        // Also stop RemoteAlertService if active
+        try {
+            RemoteAlertService.stopAlert(context)
+        } catch (e: Exception) {}
+    }
+
+    fun startFlashlight() {
+        val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager ?: return
+        val cameraIds = try {
+            cameraManager.cameraIdList.filter { id ->
                 try {
-                    cameraManager.setTorchMode(cameraId, false)
-                } catch (e: Exception) {}
-            }.start()
+                    val chars = cameraManager.getCameraCharacteristics(id)
+                    chars.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+                } catch (e: Exception) {
+                    true
+                }
+            }.ifEmpty { cameraManager.cameraIdList.toList() }
         } catch (e: Exception) {
-            e.printStackTrace()
+            cameraManager.cameraIdList.toList()
+        }
+
+        synchronized(flashLock) {
+            if (isFlashActive) return
+            isFlashActive = true
+
+            val thread = Thread({
+                var toggle = true
+                while (isFlashActive && !Thread.currentThread().isInterrupted) {
+                    try {
+                        for (id in cameraIds) {
+                            try {
+                                cameraManager.setTorchMode(id, toggle)
+                            } catch (e: Exception) {}
+                        }
+                        toggle = !toggle
+                        Thread.sleep(350)
+                    } catch (e: InterruptedException) {
+                        break
+                    } catch (e: Exception) {
+                        break
+                    }
+                }
+                // Ensure flashlight is OFF when loop terminates
+                for (id in cameraIds) {
+                    try {
+                        cameraManager.setTorchMode(id, false)
+                    } catch (e: Exception) {}
+                }
+            }, "FlashlightStrobeThread")
+            thread.isDaemon = true
+            thread.start()
+            flashThread = thread
         }
     }
 
     fun stopFlashlight() {
-        isFlashActive = false
+        synchronized(flashLock) {
+            isFlashActive = false
+            flashThread?.interrupt()
+            flashThread = null
+        }
+        
+        // Immediate hardware torch shut-off
+        try {
+            val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
+            if (cameraManager != null) {
+                for (id in cameraManager.cameraIdList) {
+                    try {
+                        cameraManager.setTorchMode(id, false)
+                    } catch (e: Exception) {}
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("EmergencyManager", "Failed to shut off torch in stopFlashlight", e)
+        }
     }
 
     private fun startAudioRecording() {
         try {
             val fileName = "${context.getExternalFilesDir(null)}/emergency_audio_${System.currentTimeMillis()}.mp4"
-            mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 MediaRecorder(context)
             } else {
                 @Suppress("DEPRECATION")
                 MediaRecorder()
-            }.apply {
+            }
+            recorder.apply {
                 setAudioSource(MediaRecorder.AudioSource.MIC)
                 setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                 setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
@@ -207,6 +293,7 @@ class EmergencyManager(private val context: Context) {
                 prepare()
                 start()
             }
+            mediaRecorder = recorder
             Log.i("EmergencyManager", "Audio recording started: $fileName")
         } catch (e: Exception) {
             Log.e("EmergencyManager", "Failed to start audio recording", e)
@@ -241,9 +328,10 @@ class EmergencyManager(private val context: Context) {
         }
 
         try {
-            val smsManager = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 context.getSystemService(SmsManager::class.java)
             } else {
+                @Suppress("DEPRECATION")
                 SmsManager.getDefault()
             }
             

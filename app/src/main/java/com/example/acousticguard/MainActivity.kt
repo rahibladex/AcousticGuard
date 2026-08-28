@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
@@ -76,6 +77,10 @@ class MainActivity : ComponentActivity() {
     private var safeWalkConfiguredDuration by mutableIntStateOf(15)
     private var safeWalkTimer: CountDownTimer? = null
 
+    private var isRemoteAlertShowing by mutableStateOf(false)
+    private var remoteAlertSender by mutableStateOf("")
+    private var remoteAlertMapsUrl by mutableStateOf("")
+
     private val audioUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
@@ -97,6 +102,11 @@ class MainActivity : ComponentActivity() {
                 ACTION_EMERGENCY_STARTED -> {
                     activateEmergencyActions()
                 }
+                RemoteAlertService.ACTION_REMOTE_ALERT_STATE_CHANGED -> {
+                    isRemoteAlertShowing = intent.getBooleanExtra(RemoteAlertService.EXTRA_IS_ACTIVE, false)
+                    remoteAlertSender = intent.getStringExtra(RemoteAlertService.EXTRA_SENDER) ?: ""
+                    remoteAlertMapsUrl = intent.getStringExtra(RemoteAlertService.EXTRA_MAPS_URL) ?: ""
+                }
             }
         }
     }
@@ -106,17 +116,8 @@ class MainActivity : ComponentActivity() {
         emergencyManager = EmergencyManager(this)
         loadSettings()
 
-        val prefs = getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
-        val themeMode = prefs.getInt("theme_mode", 0)
-
         setContent {
-            val darkTheme = when (themeMode) {
-                1 -> false
-                2 -> true
-                else -> isSystemInDarkTheme()
-            }
-
-            NariShaktiSOSTheme(darkTheme = darkTheme) {
+            NariShaktiSOSTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -204,6 +205,12 @@ class MainActivity : ComponentActivity() {
         
         if (isAddingContact) {
             AddContactDialog()
+        }
+
+        if (isRemoteAlertShowing || RemoteAlertService.isAlertActive) {
+            val sender = if (remoteAlertSender.isNotEmpty()) remoteAlertSender else RemoteAlertService.activeSender
+            val mapsUrl = if (remoteAlertMapsUrl.isNotEmpty()) remoteAlertMapsUrl else RemoteAlertService.activeMapsUrl
+            RemoteAlarmAlertModal(sender, mapsUrl)
         }
     }
 
@@ -508,6 +515,91 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
+    fun RemoteAlarmAlertModal(sender: String, mapsUrl: String) {
+        Dialog(onDismissRequest = { /* Must explicitly stop */ }) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                color = SurfaceDark,
+                border = BorderStroke(2.dp, RedEmergency),
+                shadowElevation = 24.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    val infiniteTransition = rememberInfiniteTransition(label = "remotePulse")
+                    val scale by infiniteTransition.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.15f,
+                        animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse), label = "scale"
+                    )
+
+                    Icon(
+                        Icons.Default.NotificationsActive,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp).graphicsLayer(scaleX = scale, scaleY = scale),
+                        tint = RedEmergency
+                    )
+
+                    Text(
+                        "🚨 REMOTE SOS ALERT!",
+                        color = RedEmergency,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 20.sp,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Text(
+                        "Emergency distress signal from:\n$sender",
+                        color = TextPrimary,
+                        fontSize = 15.sp,
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    if (mapsUrl.isNotEmpty()) {
+                        Button(
+                            onClick = {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(mapsUrl)).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    startActivity(intent)
+                                } catch (e: Exception) {
+                                    Toast.makeText(this@MainActivity, "Could not open map: $e", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = RoyalPurple, contentColor = Color.White)
+                        ) {
+                            Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("VIEW LIVE LOCATION", fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            isRemoteAlertShowing = false
+                            RemoteAlertService.stopAlert(this@MainActivity)
+                        },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RedEmergency, contentColor = Color.White)
+                    ) {
+                        Icon(Icons.Default.VolumeOff, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("STOP ALARM", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
     fun AddContactDialog() {
         var phoneNumber by remember { mutableStateOf("") }
         AlertDialog(
@@ -570,11 +662,26 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun updateLocationStatus() {
+        if (checkPermissions()) {
+            val locManager = EmergencyLocationManager(this)
+            locManager.getLastLocation { loc ->
+                if (loc != null) {
+                    gpsStatus = "Active (Fix Acquired)"
+                } else {
+                    gpsStatus = "Active (Searching...)"
+                }
+            }
+        } else {
+            gpsStatus = "GPS : OFF"
+        }
+    }
+
     private fun startSafetyMode() {
         isSafetyModeActive = true
         aiStatus = "AI Detection:\nON"
-        gpsStatus = "GPS : ON"
         motionStatus = "Motion SOS:\nActive"
+        updateLocationStatus()
         
         val serviceIntent = Intent(this, AudioDetectionService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -613,6 +720,7 @@ class MainActivity : ComponentActivity() {
         countdownTimer?.cancel()
         stopVibration()
         showEmergencyDialog = false
+        emergencyManager.stopEmergencyMode()
         Toast.makeText(this, "Emergency Cancelled", Toast.LENGTH_SHORT).show()
     }
 
@@ -658,12 +766,15 @@ class MainActivity : ComponentActivity() {
         vibrator.cancel()
     }
 
+    private val dynamicSmsReceiver = RemoteSmsReceiver()
+
     private fun checkPermissions(): Boolean {
         val permissions = mutableListOf(
             Manifest.permission.RECORD_AUDIO,
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.SEND_SMS,
             Manifest.permission.RECEIVE_SMS,
+            Manifest.permission.READ_SMS,
             Manifest.permission.CALL_PHONE
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -680,6 +791,7 @@ class MainActivity : ComponentActivity() {
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.SEND_SMS,
             Manifest.permission.RECEIVE_SMS,
+            Manifest.permission.READ_SMS,
             Manifest.permission.CALL_PHONE
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -731,20 +843,43 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         loadSettings()
+        updateLocationStatus()
+
+        if (RemoteAlertService.isAlertActive) {
+            isRemoteAlertShowing = true
+            remoteAlertSender = RemoteAlertService.activeSender
+            remoteAlertMapsUrl = RemoteAlertService.activeMapsUrl
+        }
+
         val filter = IntentFilter().apply {
             addAction(AudioDetectionService.ACTION_AUDIO_UPDATE)
             addAction(AudioDetectionService.ACTION_EMERGENCY_CONFIRM)
             addAction(ACTION_EMERGENCY_STARTED)
+            addAction(RemoteAlertService.ACTION_REMOTE_ALERT_STATE_CHANGED)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(audioUpdateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
             registerReceiver(audioUpdateReceiver, filter)
         }
+
+        val smsFilter = IntentFilter("android.provider.Telephony.SMS_RECEIVED").apply {
+            priority = 999
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(dynamicSmsReceiver, smsFilter, Context.RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(dynamicSmsReceiver, smsFilter)
+        }
     }
 
     override fun onPause() {
         super.onPause()
-        unregisterReceiver(audioUpdateReceiver)
+        try {
+            unregisterReceiver(audioUpdateReceiver)
+        } catch (e: Exception) {}
+        try {
+            unregisterReceiver(dynamicSmsReceiver)
+        } catch (e: Exception) {}
     }
 }
