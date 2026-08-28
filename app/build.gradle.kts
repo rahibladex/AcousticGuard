@@ -11,8 +11,8 @@ android {
         applicationId = "com.example.acousticguard"
         minSdk = 24
         targetSdk = 34
-        versionCode = 21
-        versionName = "6.1.0"
+        versionCode = 22
+        versionName = "7.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

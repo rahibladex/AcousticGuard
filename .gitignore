@@ -16,6 +16,7 @@
 
 # Build folders
 **/build/
+*.apk
 
 # Local configuration
 local.properties

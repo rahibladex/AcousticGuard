@@ -1,108 +1,99 @@
-# NariShakti SOS
+# TEJASHWINI (NariShakti SOS / AcousticGuard)
 
-NariShakti SOS is an open-source Android application designed for personal safety. It uses AI-powered audio detection to monitor the environment for emergency sounds (like screams or loud shouting) and automatically triggers safety protocols.
+**TEJASHWINI** is an open-source Android personal safety and distress defense application. It uses **On-Device Edge AI audio inference**, **Shake-to-SOS motion sensors**, **real-time satellite GPS beacons**, and **Remote SOS Alarm Sync** to protect women and individuals in distress.
 
-## Features
+---
 
-- **AI Audio & Voice Detection**: Real-time monitoring of ambient sound levels with voice-activated SOS support.
-- **Adjustable Sensitivity**: Users can set the detection threshold (dB) via a seeker bar.
-- **Silent SOS Mode**: Trigger alerts (SMS + Location) discreetly without loud alarms or flashing lights.
-- **Safety Tools**:
-  - **Fake Call**: Schedule a simulated incoming call to escape uncomfortable situations.
-  - **Safe Walk Timer**: A countdown timer that triggers SOS if not checked-in or cancelled.
-- **Automated Alerts**:
-  - **High-Intensity Alarm**: Forces system alarm volume to 100% for audible distress.
-  - **Remote Alarm Sync**: Automatically triggers a loud alarm on a trusted contact's phone (even if silent) when you are in danger (requires TEJASHWINI app on both devices).
-  - **Automatic Emergency Call**: Automatically initiates a phone call to your primary trusted contact when an SOS is triggered.
-  - **Proof-of-Event**: Automatically records audio during an emergency for evidence.
-  - **Low Battery SOS**: Notifies contacts when the battery drops below 5%.
-  - **Location Sharing**: Sends fresh high-accuracy GPS coordinates via SMS.
-- **Emergency Countdown**: 5-second countdown with **vibration feedback** before triggering actions.
-- **Trusted Contacts Management**: Easily manage your circle of safety.
-- **Material 3 UI**: Modern, smooth interface with full Dark Mode support.
+## 🌟 Key Features
 
-## Download
+- **🧠 Edge AI Audio & Scream Detection**: Real-time monitoring of ambient sound buffers via TensorFlow Lite to classify distress screams and shout decibel spikes locally without cloud latency or privacy exposure.
+- **⚡ Shake-to-SOS Motion Trigger**: Discreetly activates emergency protocols by vigorously shaking the phone inside a pocket or purse without unlocking the screen.
+- **🚨 Remote SOS Alarm Sync (Guardian Ringing)**:
+  - When an emergency SOS is triggered, your trusted contacts' phones will **automatically ring loud sirens at 100% max volume** (overriding Silent and Do-Not-Disturb modes).
+  - Wakes up the guardian's screen with `WakeLock`, posts high-priority Heads-Up Notifications, and displays a pulsing alert dialog with a **"VIEW LIVE LOCATION"** one-tap button.
+- **📍 Google Fused Live Satellite GPS Tracking**: Automatically generates universal Google Maps links (`https://maps.google.com/?q=lat,lng`) and continuously transmits fresh location beacons every 2 minutes.
+- **🚶 Safe Walk Transit Timer**: Configurable countdown timer (5m, 15m, 30m, 60m) that automatically dispatches emergency alerts if you do not check in safely before arrival.
+- **📞 Decoy Fake Call**: Simulates an authentic full-screen incoming phone call to gracefully exit threatening or uncomfortable situations.
+- **🔕 Stealth / Silent SOS Mode**: Disables local sirens and camera strobes while silently broadcasting GPS coordinates to guardians.
+- **🔋 Low Battery Emergency Beacon**: Automatically broadcasts an urgent alert with your last known GPS coordinates when battery drops below 5%.
+- **⏱️ 5-Second False-Alarm Buffer**: Prominent countdown with continuous vibration to abort accidental triggers safely.
+- **🔄 In-App GitHub Auto-Updater**: One-tap version checking, background APK downloading, and seamless system package installation.
+- **🎨 Pure Dark Theme**: High-contrast, battery-efficient dark theme interface built with Jetpack Compose.
 
-You can download the latest APK from the [Releases](https://github.com/rahibladex/AcousticGuard/releases) page.
+---
 
-## Tech Stack
+## 📥 Download
 
-- **Kotlin**: Core application logic.
-- **TensorFlow Lite**: AI model inference (Prototype uses mock logic; add `model.tflite` to assets for full functionality).
-- **Material 3**: Modern Android UI components.
-- **Foreground Services**: Ensuring reliable background monitoring.
+Download the latest APK release from the [GitHub Releases](https://github.com/rahibladex/AcousticGuard/releases) page.
 
-## Version History
+---
+
+## 🛠️ Tech Stack
+
+- **Kotlin & Jetpack Compose**: Modern declarative Android UI.
+- **TensorFlow Lite**: On-device audio classification.
+- **Google Play Services Location**: Fused Location Provider.
+- **Android Camera2 API**: Multi-camera hardware strobe.
+- **Android Telephony & SMS**: Automated emergency dispatch and Remote SOS trigger broadcasting.
+- **Foreground Services & WakeLocks**: Reliable 24/7 background protection.
+
+---
+
+## 📜 Version History
+
+### v7.0.0 (The Ultimate Guardian & Stability Release) — *Latest*
+- **🚨 Remote SOS Siren Sync**:
+  - Implemented `RemoteAlertService` foreground service with `FOREGROUND_SERVICE_MEDIA_PLAYBACK` and `WAKE_LOCK`.
+  - Automatically forces `AudioManager.STREAM_ALARM` to 100% max volume with `FLAG_AUDIBILITY_ENFORCED`.
+  - Added continuous emergency vibration and high-priority heads-up notifications with direct map links.
+  - Added real-time SMS trigger receiver (`[TEJASHWINI_SOS_TRIGGER]`) with phone number normalization and safety verification.
+- **📍 Google Fused GPS & Live Location Links**:
+  - Fixed location sharing to always provide valid, live Google Maps links (`https://maps.google.com/?q=lat,lng`).
+  - Added recurring 2-minute live location beacon updates.
+- **🌙 Permanent Dark Theme**:
+  - Removed theme switching and locked the app to a high-contrast dark theme matching AMOLED displays.
+- **⚡ Immediate Hardware Shut-Off**:
+  - Rewrote `EmergencyManager` with `@Volatile` companion state and thread-safe interruption.
+  - Tapping "STOP EMERGENCY", "I AM SAFE", or toggling off features in Settings immediately shuts off the camera torch and terminates tone generators.
+- **🔄 In-App Updater Fixes**:
+  - Fixed background thread Looper/Toast crash (`Can't toast on a thread that has not called Looper.prepare()`).
+  - Added required GitHub REST API headers and Android 8.0+ `ACTION_MANAGE_UNKNOWN_APP_SOURCES` permission handling.
+- **📽️ Presentation Website**:
+  - Created an interactive showcase and slide deck presentation website inside `website/`.
 
 ### v6.1.0 (The Stability & UI Fix)
-- **Theme Fixes**: Migrated theme switching to fully Compose-native state. Fixed issue where Light/Dark mode would not update instantly.
-- **Improved Startup**: Enhanced activity initialization to prevent black screens and ANR (Application Not Responding) issues on some devices.
-- **Gradle Recovery**: Restored missing Gradle wrapper files for better project portability.
+- **Theme Fixes**: Migrated theme switching to Compose-native state. Fixed black screen/ANR issues on startup.
+- **Gradle Recovery**: Restored missing Gradle wrapper files.
 
 ### v6.0.0 (The Sync & Call Update)
-- **Remote Alarm Sync**: Introduced a high-priority SOS trigger that rings a trusted contact's phone even if it's on **Silent** or **Vibrate** (requires `RECEIVE_SMS` permission).
-- **Automatic Emergency Call**: The app now automatically initiates a phone call to the first trusted contact when an emergency is detected.
-- **Enhanced Privacy**: Added settings toggles for Remote Alarm and Automatic Calling.
-- **Permission Updates**: Integrated `CALL_PHONE` and `RECEIVE_SMS` workflows.
+- **Remote Alarm Sync**: Initial prototype for remote SOS triggering via SMS.
+- **Automatic Emergency Call**: Automatically initiates a call to the first trusted contact.
 
 ### v3.0.0 (The Update Update)
-- **Automatic Updates**: Check for and install the latest app versions directly from the Settings menu.
-- **Improved Reliability**: Refined background service stability for long-term monitoring.
-- **Enhanced Security**: Integrated FileProvider for secure APK installations.
-
-### v2.0.2 (Maintenance & UX)
-- **Stop Alarm Option**: Added a dedicated button to silence the high-intensity alarm once safety is confirmed, without terminating the entire emergency session.
-- **Improved UI States**: Clearer visual feedback when safety features are active.
+- **Automatic Updates**: In-app APK updates via GitHub Releases.
+- **FileProvider Integration**: Secure package installation.
 
 ### v2.0.0 (Major Feature Update)
-- **Voice SOS**: Trigger emergencies using voice keywords.
-- **Silent SOS**: Discreet alerting without alarm/flashlight.
-- **Safe Walk Timer**: Scheduled SOS trigger for late-night commutes.
-- **Fake Call**: Simulated incoming call tool.
-- **Low Battery Alert**: Auto-notify contacts when battery is < 5%.
-- **Audio Recording**: Automated "Proof-of-Event" recording during emergencies.
-
-### v1.7.0 (Redesign)
-- **Jetpack Compose Migration**: Redesigned UI with Material 3.
-- **Pulsing Safety Toggle**: Modernized active state indicators.
-- **Improved Settings & Themes**: Functional dark/light mode support.
-
-### v1.6.0 (Motion Trigger)
-- **Shake-to-SOS**: Trigger an emergency instantly by vigorously shaking the device.
-- Uses advanced accelerometer filtering to prevent accidental triggers while walking.
-
-### v1.5.0 (Bug Fixes)
-- Fixed a bug where multiple location SMS messages were sent for a single emergency event.
-
-### v1.4.0 (UX & Control)
-- **App Themes**: Full support for Dark Mode and Light Mode with a manual toggle in Settings.
-- **Contact Management**: Improved Trusted Contacts dialog with the ability to remove existing contacts.
-- **Dedicated Settings Screen**: New activity to toggle specific emergency features (Alarm, Flashlight, Vibration).
-
-### v1.3.0 (Reliability & Intensity)
-- **Improved GPS Accuracy**: Prioritizes fresh GPS fixes for precise high-accuracy location sharing.
-- **High-Intensity Alarm**: Automatically forces system alarm volume to 100% when triggered.
-
-### v1.2.0 (Customization & Feedback)
-- **Adjustable Sensitivity**: New dB threshold slider to calibrate audio detection for different environments.
-- **Countdown Vibration**: Continuous haptic feedback during the 5-second safety countdown.
+- **Safe Walk Timer**, **Fake Call**, **Low Battery Alert**, and **Proof-of-Event Audio Recording**.
 
 ### v1.0.0 (Initial Release)
-- Core safety monitoring service with AI audio classification.
-- Automated Emergency Protocol: Loud alarm, flashing flashlight, and SMS alerts.
-- Basic Trusted Contacts management.
-- Resolved initial Gradle and Environment compatibility issues.
+- Core AI audio distress monitoring and automated emergency protocols.
 
-## Permissions Required
+---
 
-- `RECORD_AUDIO`: For real-time sound monitoring.
-- `ACCESS_FINE_LOCATION`: To send accurate coordinates during an emergency.
-- `SEND_SMS`: To notify your trusted contacts.
-- `RECEIVE_SMS`: To detect remote SOS triggers from trusted contacts.
-- `CALL_PHONE`: To automatically call emergency contacts.
-- `CAMERA`: To use the flashlight for distress signaling.
-- `MODIFY_AUDIO_SETTINGS`: To override silent mode for emergency alerts.
+## 🔒 Permissions Required
 
-## License
+- `RECORD_AUDIO`: For real-time on-device sound monitoring.
+- `ACCESS_FINE_LOCATION`: To send live GPS coordinates.
+- `SEND_SMS`: To broadcast emergency alerts to trusted contacts.
+- `RECEIVE_SMS` & `READ_SMS`: For Remote SOS Alarm synchronization.
+- `CALL_PHONE`: To trigger emergency calls to primary guardians.
+- `CAMERA`: For emergency flashing flashlight strobe.
+- `WAKE_LOCK`: To wake screen during remote emergency alerts.
+- `FOREGROUND_SERVICE_MEDIA_PLAYBACK`: For loud remote alarm siren playback.
 
-This project is open-source and available under the [MIT License](LICENSE).
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
