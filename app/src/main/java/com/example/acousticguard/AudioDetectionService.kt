@@ -11,7 +11,10 @@ import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.hardware.Sensor
 import android.hardware.SensorManager
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
 import android.media.AudioFormat
+import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.BatteryManager
@@ -28,9 +31,16 @@ class AudioDetectionService : Service() {
 
     @Volatile
     private var isRecording = false
+
+    @Volatile
+    private var isPausedDueToFocus = false
+
     private var audioRecord: AudioRecord? = null
     private var recordingThread: Thread? = null
     private val audioLock = Any()
+
+    private var audioManager: AudioManager? = null
+    private var audioFocusRequest: AudioFocusRequest? = null
 
     private lateinit var audioClassifier: AudioClassifier
     private var screamConfidenceCount = 0
@@ -55,6 +65,24 @@ class AudioDetectionService : Service() {
         }
     }
 
+    private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
+        when (focusChange) {
+            AudioManager.AUDIOFOCUS_LOSS -> {
+                Log.w("AudioDetection", "Audio focus lost permanently (e.g. phone call). Pausing monitoring.")
+                isPausedDueToFocus = true
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                Log.w("AudioDetection", "Audio focus lost transiently. Pausing audio monitoring.")
+                isPausedDueToFocus = true
+            }
+            AudioManager.AUDIOFOCUS_GAIN -> {
+                Log.i("AudioDetection", "Audio focus regained. Resuming audio monitoring.")
+                isPausedDueToFocus = false
+            }
+        }
+    }
+
     companion object {
         const val ACTION_AUDIO_UPDATE = "com.example.acousticguard.AUDIO_UPDATE"
         const val ACTION_EMERGENCY_CONFIRM = "com.example.acousticguard.EMERGENCY_CONFIRM"
@@ -69,6 +97,7 @@ class AudioDetectionService : Service() {
         audioClassifier = AudioClassifier(this)
         emergencyManager = EmergencyManager(this)
         emergencyLocationManager = EmergencyLocationManager(this)
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as? AudioManager
         
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         setupShakeDetector()
@@ -106,7 +135,7 @@ class AudioDetectionService : Service() {
 
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("TEJASHWINI Active")
-            .setContentText("Safety Mode is monitoring audio...")
+            .setContentText("Safety Mode is monitoring audio & location...")
             .setSmallIcon(R.drawable.app_logo)
             .setOngoing(true)
             .build()
@@ -141,10 +170,58 @@ class AudioDetectionService : Service() {
         }
     }
 
+    private fun requestAudioFocus() {
+        val am = audioManager ?: return
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val playbackAttributes = AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build()
+                
+                val req = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                    .setAudioAttributes(playbackAttributes)
+                    .setAcceptsDelayedFocusGain(true)
+                    .setOnAudioFocusChangeListener(audioFocusChangeListener)
+                    .build()
+                
+                audioFocusRequest = req
+                am.requestAudioFocus(req)
+            } else {
+                @Suppress("DEPRECATION")
+                am.requestAudioFocus(
+                    audioFocusChangeListener,
+                    AudioManager.STREAM_VOICE_CALL,
+                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("AudioDetection", "Error requesting audio focus", e)
+        }
+    }
+
+    private fun releaseAudioFocus() {
+        val am = audioManager ?: return
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                audioFocusRequest?.let { am.abandonAudioFocusRequest(it) }
+                audioFocusRequest = null
+            } else {
+                @Suppress("DEPRECATION")
+                am.abandonAudioFocus(audioFocusChangeListener)
+            }
+        } catch (e: Exception) {
+            Log.e("AudioDetection", "Error releasing audio focus", e)
+        }
+    }
+
     private fun startAudioRecording() {
         synchronized(audioLock) {
             if (isRecording) return
             
+            requestAudioFocus()
+            isPausedDueToFocus = false
+
             val sampleRate = 16000
             val channelConfig = AudioFormat.CHANNEL_IN_MONO
             val audioFormat = AudioFormat.ENCODING_PCM_16BIT
@@ -177,6 +254,15 @@ class AudioDetectionService : Service() {
                 val thread = Thread({
                     val buffer = ShortArray(bufferSize)
                     while (isRecording && !Thread.currentThread().isInterrupted) {
+                        if (isPausedDueToFocus) {
+                            try {
+                                Thread.sleep(500)
+                            } catch (e: InterruptedException) {
+                                break
+                            }
+                            continue
+                        }
+
                         val recordInstance = audioRecord ?: break
                         val readResult = try {
                             recordInstance.read(buffer, 0, buffer.size)
@@ -184,10 +270,14 @@ class AudioDetectionService : Service() {
                             -1
                         }
 
-                        if (readResult > 0 && isRecording) {
+                        if (readResult > 0 && isRecording && !isPausedDueToFocus) {
                             processAudioBuffer(buffer, readResult)
                         } else if (readResult < 0) {
-                            break
+                            try {
+                                Thread.sleep(200)
+                            } catch (e: InterruptedException) {
+                                break
+                            }
                         }
                     }
                     Log.i("AudioDetection", "Audio processing thread exited.")
@@ -196,7 +286,7 @@ class AudioDetectionService : Service() {
                 thread.isDaemon = true
                 thread.start()
                 recordingThread = thread
-                Log.i("AudioDetection", "Audio recording started successfully.")
+                Log.i("AudioDetection", "Audio recording started successfully with AudioFocus protection.")
             } catch (e: SecurityException) {
                 Log.e("AudioDetection", "Permission denied for recording audio", e)
             } catch (e: Exception) {
@@ -208,7 +298,10 @@ class AudioDetectionService : Service() {
     private fun stopAudioRecording() {
         synchronized(audioLock) {
             isRecording = false
+            isPausedDueToFocus = false
             
+            releaseAudioFocus()
+
             recordingThread?.interrupt()
             recordingThread = null
 
@@ -269,7 +362,7 @@ class AudioDetectionService : Service() {
             screamConfidenceCount = 0
         }
 
-        if (!isRecording) return
+        if (!isRecording || isPausedDueToFocus) return
 
         val intent = Intent(ACTION_AUDIO_UPDATE).apply {
             setPackage(packageName)
@@ -290,6 +383,7 @@ class AudioDetectionService : Service() {
     override fun onDestroy() {
         stopAudioRecording()
         emergencyLocationManager.stopContinuousLocationUpdates()
+        audioClassifier.close()
         
         shakeDetector?.let {
             try {
