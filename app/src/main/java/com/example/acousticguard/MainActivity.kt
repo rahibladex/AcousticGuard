@@ -594,6 +594,7 @@ class MainActivity : ComponentActivity() {
                         onClick = {
                             isRemoteAlertShowing = false
                             RemoteAlertService.stopAlert(this@MainActivity)
+                            EmergencyManager(this@MainActivity).stopAlarm()
                         },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape = RoundedCornerShape(14.dp),

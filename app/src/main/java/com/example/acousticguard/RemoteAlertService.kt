@@ -28,10 +28,6 @@ import androidx.core.app.ServiceCompat
 
 class RemoteAlertService : Service() {
 
-    private var mediaPlayer: MediaPlayer? = null
-    private var wakeLock: PowerManager.WakeLock? = null
-    private var isVibrating = false
-
     companion object {
         const val CHANNEL_ID = "RemoteSOSAlarmChannel"
         const val NOTIFICATION_ID = 2002
@@ -47,10 +43,23 @@ class RemoteAlertService : Service() {
 
         var isAlertActive by mutableStateOf(false)
             private set
+
         var activeSender by mutableStateOf("")
             private set
+
         var activeMapsUrl by mutableStateOf("")
             private set
+
+        private val alertLock = Any()
+
+        @Volatile
+        private var activeMediaPlayer: MediaPlayer? = null
+
+        @Volatile
+        private var activeWakeLock: PowerManager.WakeLock? = null
+
+        @Volatile
+        private var isVibrating = false
 
         fun startAlert(context: Context, sender: String, mapsUrl: String, message: String) {
             val intent = Intent(context, RemoteAlertService::class.java).apply {
@@ -67,10 +76,69 @@ class RemoteAlertService : Service() {
         }
 
         fun stopAlert(context: Context) {
-            val intent = Intent(context, RemoteAlertService::class.java).apply {
-                action = ACTION_STOP_ALERT
+            synchronized(alertLock) {
+                isAlertActive = false
+                activeSender = ""
+                activeMapsUrl = ""
+
+                // 1. Instantly stop and release MediaPlayer
+                try {
+                    activeMediaPlayer?.apply {
+                        try { if (isPlaying) stop() } catch (e: Exception) {}
+                        try { release() } catch (e: Exception) {}
+                    }
+                } catch (e: Exception) {
+                    Log.e("RemoteAlertService", "Error stopping activeMediaPlayer", e)
+                } finally {
+                    activeMediaPlayer = null
+                }
+
+                // 2. Instantly cancel vibration
+                try {
+                    val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        val vm = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+                        vm?.defaultVibrator
+                    } else {
+                        @Suppress("DEPRECATION")
+                        context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                    }
+                    vibrator?.cancel()
+                    isVibrating = false
+                } catch (e: Exception) {}
+
+                // 3. Instantly release WakeLock
+                try {
+                    if (activeWakeLock?.isHeld == true) {
+                        activeWakeLock?.release()
+                    }
+                } catch (e: Exception) {}
+                activeWakeLock = null
+
+                // 4. Cancel notification
+                try {
+                    val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                    nm?.cancel(NOTIFICATION_ID)
+                } catch (e: Exception) {}
+
+                // 5. Broadcast state change
+                try {
+                    val stateIntent = Intent(ACTION_REMOTE_ALERT_STATE_CHANGED).apply {
+                        putExtra(EXTRA_IS_ACTIVE, false)
+                        setPackage(context.packageName)
+                    }
+                    context.sendBroadcast(stateIntent)
+                } catch (e: Exception) {}
+
+                // 6. Stop the service
+                try {
+                    val intent = Intent(context, RemoteAlertService::class.java).apply {
+                        action = ACTION_STOP_ALERT
+                    }
+                    context.stopService(intent)
+                } catch (e: Exception) {}
+
+                Log.i("RemoteAlertService", "Remote Alert stopped synchronously.")
             }
-            context.startService(intent)
         }
     }
 
@@ -83,6 +151,8 @@ class RemoteAlertService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent == null || intent.action == ACTION_STOP_ALERT) {
+            stopAlert(this)
+            stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
         }
@@ -92,22 +162,24 @@ class RemoteAlertService : Service() {
             val mapsUrl = intent.getStringExtra(EXTRA_MAPS_URL) ?: ""
             val message = intent.getStringExtra(EXTRA_MESSAGE) ?: "Emergency SOS Triggered!"
 
-            isAlertActive = true
-            activeSender = sender
-            activeMapsUrl = mapsUrl
+            synchronized(alertLock) {
+                isAlertActive = true
+                activeSender = sender
+                activeMapsUrl = mapsUrl
 
-            acquireWakeLock()
-            startForegroundNotification(sender, mapsUrl, message)
-            startLoudAlarm()
-            startEmergencyVibration()
+                acquireWakeLock()
+                startForegroundNotification(sender, mapsUrl, message)
+                startLoudAlarm()
+                startEmergencyVibration()
 
-            val stateIntent = Intent(ACTION_REMOTE_ALERT_STATE_CHANGED).apply {
-                putExtra(EXTRA_IS_ACTIVE, true)
-                putExtra(EXTRA_SENDER, sender)
-                putExtra(EXTRA_MAPS_URL, mapsUrl)
-                setPackage(packageName)
+                val stateIntent = Intent(ACTION_REMOTE_ALERT_STATE_CHANGED).apply {
+                    putExtra(EXTRA_IS_ACTIVE, true)
+                    putExtra(EXTRA_SENDER, sender)
+                    putExtra(EXTRA_MAPS_URL, mapsUrl)
+                    setPackage(packageName)
+                }
+                sendBroadcast(stateIntent)
             }
-            sendBroadcast(stateIntent)
         }
 
         return START_STICKY
@@ -117,12 +189,13 @@ class RemoteAlertService : Service() {
         try {
             val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
             @Suppress("DEPRECATION")
-            wakeLock = powerManager.newWakeLock(
+            val wl = powerManager.newWakeLock(
                 PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE,
                 "acousticguard:remote_alarm_wake"
             ).apply {
                 acquire(5 * 60 * 1000L) // 5 minutes max
             }
+            activeWakeLock = wl
         } catch (e: Exception) {
             Log.e("RemoteAlertService", "Failed to acquire wake lock", e)
         }
@@ -216,7 +289,12 @@ class RemoteAlertService : Service() {
             val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
 
-            mediaPlayer = MediaPlayer().apply {
+            // Stop any existing player first
+            try {
+                activeMediaPlayer?.release()
+            } catch (e: Exception) {}
+
+            val mp = MediaPlayer().apply {
                 setDataSource(this@RemoteAlertService, alarmUri)
                 setAudioAttributes(
                     AudioAttributes.Builder()
@@ -229,6 +307,7 @@ class RemoteAlertService : Service() {
                 prepare()
                 start()
             }
+            activeMediaPlayer = mp
             Log.i("RemoteAlertService", "Loud alarm started playing at max volume")
         } catch (e: Exception) {
             Log.e("RemoteAlertService", "Failed to start media player for alarm", e)
@@ -257,47 +336,12 @@ class RemoteAlertService : Service() {
         }
     }
 
-    private fun stopEmergencyVibration() {
-        if (!isVibrating) return
-        isVibrating = false
-        try {
-            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-                vibratorManager.defaultVibrator
-            } else {
-                @Suppress("DEPRECATION")
-                getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            }
-            vibrator.cancel()
-        } catch (e: Exception) {}
-    }
-
     override fun onDestroy() {
         super.onDestroy()
-        isAlertActive = false
-        activeSender = ""
-        activeMapsUrl = ""
-
+        stopAlert(this)
         try {
-            mediaPlayer?.stop()
-            mediaPlayer?.release()
-            mediaPlayer = null
+            stopForeground(STOP_FOREGROUND_REMOVE)
         } catch (e: Exception) {}
-
-        stopEmergencyVibration()
-
-        try {
-            if (wakeLock?.isHeld == true) {
-                wakeLock?.release()
-            }
-        } catch (e: Exception) {}
-
-        val stateIntent = Intent(ACTION_REMOTE_ALERT_STATE_CHANGED).apply {
-            putExtra(EXTRA_IS_ACTIVE, false)
-            setPackage(packageName)
-        }
-        sendBroadcast(stateIntent)
-
-        Log.i("RemoteAlertService", "Remote SOS Alert stopped.")
+        Log.i("RemoteAlertService", "RemoteAlertService onDestroy completed.")
     }
 }
