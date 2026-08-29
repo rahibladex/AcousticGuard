@@ -44,7 +44,7 @@ class EmergencyManager(private val context: Context) {
 
     private val liveLocationRunnable = object : Runnable {
         override fun run() {
-            updateAndSendLocation()
+            sendLiveLocationUpdate()
             handler.postDelayed(this, 2 * 60 * 1000) // Send update every 2 minutes
         }
     }
@@ -80,43 +80,60 @@ class EmergencyManager(private val context: Context) {
 
         startAudioRecording()
         
-        // Start continuous active high-accuracy location streaming
+        // 1. Start continuous location tracking
         emergencyLocationManager.startContinuousLocationUpdates { freshLocation ->
             if (!hasSentInitialGpsLink && EmergencyLocationManager.isValidLocation(freshLocation)) {
-                val mapsLink = "https://maps.google.com/?q=${freshLocation.latitude},${freshLocation.longitude}"
                 hasSentInitialGpsLink = true
+                val mapsLink = "https://maps.google.com/?q=${freshLocation.latitude},${freshLocation.longitude}"
                 Log.i("EmergencyManager", "Initial GPS locked via streaming callback: $mapsLink")
                 sendEmergencySms(mapsLink)
             }
         }
 
-        // Immediately check and dispatch first SOS alert
-        updateAndSendLocation()
+        // 2. Dispatch the initial emergency SMS with guaranteed Google Maps link
+        dispatchEmergencySmsWithConfirmedLocation(attempt = 1)
 
-        // Schedule periodic 2-minute live location updates
+        // 3. Schedule 2-minute live location beacon loop
         handler.removeCallbacks(liveLocationRunnable)
         handler.postDelayed(liveLocationRunnable, 2 * 60 * 1000)
     }
 
-    private fun updateAndSendLocation() {
+    private fun dispatchEmergencySmsWithConfirmedLocation(attempt: Int) {
+        if (hasSentInitialGpsLink) return
+
         emergencyLocationManager.getLastLocation { location ->
             if (location != null && EmergencyLocationManager.isValidLocation(location)) {
-                val mapsLink = "https://maps.google.com/?q=${location.latitude},${location.longitude}"
                 hasSentInitialGpsLink = true
-                Log.i("EmergencyManager", "updateAndSendLocation: Sending confirmed GPS mapsLink=$mapsLink")
+                val mapsLink = "https://maps.google.com/?q=${location.latitude},${location.longitude}"
+                Log.i("EmergencyManager", "dispatchEmergencySms: Sending verified mapsLink=$mapsLink on attempt $attempt")
                 sendEmergencySms(mapsLink)
             } else {
-                Log.w("EmergencyManager", "Location not immediately available, checking OS native providers...")
-                val immediateNative = emergencyLocationManager.getImmediateBestLocation()
-                if (immediateNative != null && EmergencyLocationManager.isValidLocation(immediateNative)) {
-                    val mapsLink = "https://maps.google.com/?q=${immediateNative.latitude},${immediateNative.longitude}"
+                val immediateLoc = emergencyLocationManager.getImmediateBestLocation()
+                if (immediateLoc != null && EmergencyLocationManager.isValidLocation(immediateLoc)) {
                     hasSentInitialGpsLink = true
-                    Log.i("EmergencyManager", "Sending immediate native location mapsLink=$mapsLink")
+                    val mapsLink = "https://maps.google.com/?q=${immediateLoc.latitude},${immediateLoc.longitude}"
+                    Log.i("EmergencyManager", "dispatchEmergencySms: Immediate fallback mapsLink=$mapsLink")
                     sendEmergencySms(mapsLink)
-                } else if (!hasSentInitialGpsLink) {
-                    Log.i("EmergencyManager", "Sending initial alert while GPS fix completes...")
-                    sendCustomSms("EMERGENCY ALERT! I need help. Acquiring live GPS lock, confirmed location link following in seconds... ${RemoteSmsReceiver.TRIGGER_KEYWORD}")
+                } else if (attempt <= 10) {
+                    // Retry every 1000ms until GPS satellite/network lock resolves
+                    Log.w("EmergencyManager", "Location still locking, retrying in 1s (attempt $attempt/10)...")
+                    handler.postDelayed({
+                        dispatchEmergencySmsWithConfirmedLocation(attempt + 1)
+                    }, 1000)
+                } else {
+                    Log.e("EmergencyManager", "Could not lock location after 10 seconds.")
                 }
+            }
+        }
+    }
+
+    private fun sendLiveLocationUpdate() {
+        emergencyLocationManager.getLastLocation { location ->
+            val loc = location ?: emergencyLocationManager.getImmediateBestLocation()
+            if (loc != null && EmergencyLocationManager.isValidLocation(loc)) {
+                val mapsLink = "https://maps.google.com/?q=${loc.latitude},${loc.longitude}"
+                Log.i("EmergencyManager", "sendLiveLocationUpdate: Sending 2-min update $mapsLink")
+                sendEmergencySms(mapsLink)
             }
         }
     }
