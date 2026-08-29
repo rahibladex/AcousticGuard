@@ -1,7 +1,12 @@
 package com.example.acousticguard
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatDelegate
@@ -47,6 +52,10 @@ class SettingsActivity : ComponentActivity() {
     @Composable
     fun SettingsScreen() {
         val prefs = remember { getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE) }
+        val powerManager = remember { getSystemService(Context.POWER_SERVICE) as? PowerManager }
+        var isBatteryIgnored by remember {
+            mutableStateOf(powerManager?.isIgnoringBatteryOptimizations(packageName) == true)
+        }
         
         var emergencyFlashlight by remember { 
             mutableStateOf(prefs.getBoolean("emergency_flashlight", true)) 
@@ -81,10 +90,12 @@ class SettingsActivity : ComponentActivity() {
             topBar = {
                 CenterAlignedTopAppBar(
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
-                    title = { Text("SETTINGS", fontWeight = FontWeight.Bold, letterSpacing = 2.sp, color = TextPrimary) },
+                    title = { 
+                        Text("Settings", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = TextPrimary) 
+                    },
                     navigationIcon = {
                         IconButton(onClick = { finish() }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = RoyalPurple)
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = TextPrimary)
                         }
                     }
                 )
@@ -92,13 +103,13 @@ class SettingsActivity : ComponentActivity() {
         ) { padding ->
             Column(
                 modifier = Modifier
-                    .padding(padding)
                     .fillMaxSize()
+                    .padding(padding)
                     .verticalScroll(rememberScrollState())
-                    .padding(24.dp),
+                    .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                SettingSectionTitle("Emergency Features")
+                SettingSectionTitle("Emergency Actions")
                 
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -107,14 +118,14 @@ class SettingsActivity : ComponentActivity() {
                     border = BorderStroke(1.dp, RoyalPurple.copy(alpha = 0.2f))
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        ToggleOption("Flashing Flashlight", emergencyFlashlight) {
+                        ToggleOption("Strobe Flashlight", emergencyFlashlight) {
                             emergencyFlashlight = it
                             prefs.edit().putBoolean("emergency_flashlight", it).apply()
                             if (!it) {
                                 EmergencyManager(this@SettingsActivity).stopFlashlight()
                             }
                         }
-                        ToggleOption("Loud Alarm Sound", emergencyAlarm) {
+                        ToggleOption("Loud Siren Alarm", emergencyAlarm) {
                             emergencyAlarm = it
                             prefs.edit().putBoolean("emergency_alarm", it).apply()
                             if (!it) {
@@ -151,6 +162,84 @@ class SettingsActivity : ComponentActivity() {
                             prefs.edit().putBoolean("allow_remote_alarm", it).apply()
                             if (!it) {
                                 RemoteAlertService.stopAlert(this@SettingsActivity)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                SettingSectionTitle("Background Protection")
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = SurfaceDark,
+                    border = BorderStroke(1.dp, if (isBatteryIgnored) GreenActive.copy(alpha = 0.4f) else RedEmergency.copy(alpha = 0.4f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.BatteryChargingFull,
+                                    contentDescription = null,
+                                    tint = if (isBatteryIgnored) GreenActive else RedEmergency
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Battery Optimization",
+                                    color = TextPrimary,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
+                                )
+                            }
+                            Text(
+                                text = if (isBatteryIgnored) "Unrestricted" else "Optimized",
+                                color = if (isBatteryIgnored) GreenActive else RedEmergency,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
+
+                        Text(
+                            text = if (isBatteryIgnored) {
+                                "App is protected against aggressive OEM battery killers (Samsung, Xiaomi, OnePlus). 24/7 background tracking is active."
+                            } else {
+                                "Recommended: Whitelist TEJASHWINI so Android does not kill audio tracking & SOS monitoring when screen is locked."
+                            },
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp
+                        )
+
+                        if (!isBatteryIgnored) {
+                            Button(
+                                onClick = {
+                                    try {
+                                        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                            data = Uri.parse("package:$packageName")
+                                        }
+                                        startActivity(intent)
+                                    } catch (e: Exception) {
+                                        try {
+                                            startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                                        } catch (e2: Exception) {
+                                            Toast.makeText(this@SettingsActivity, "Could not open battery settings", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = RoyalPurple, contentColor = Color.White),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth().height(42.dp)
+                            ) {
+                                Text("Allow Unrestricted Background", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
