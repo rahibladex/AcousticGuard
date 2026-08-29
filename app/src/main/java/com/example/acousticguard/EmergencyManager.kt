@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.location.Location
 import android.media.AudioManager
 import android.media.MediaRecorder
 import android.media.ToneGenerator
@@ -79,49 +80,52 @@ class EmergencyManager(private val context: Context) {
 
         startAudioRecording()
         
-        // Start periodic live location updates
+        // Start continuous active high-accuracy location streaming
+        emergencyLocationManager.startContinuousLocationUpdates { freshLocation ->
+            if (!hasSentInitialGpsLink && EmergencyLocationManager.isValidLocation(freshLocation)) {
+                val mapsLink = "https://maps.google.com/?q=${freshLocation.latitude},${freshLocation.longitude}"
+                hasSentInitialGpsLink = true
+                Log.i("EmergencyManager", "Initial GPS locked via streaming callback: $mapsLink")
+                sendEmergencySms(mapsLink)
+            }
+        }
+
+        // Immediately check and dispatch first SOS alert
+        updateAndSendLocation()
+
+        // Schedule periodic 2-minute live location updates
         handler.removeCallbacks(liveLocationRunnable)
-        handler.post(liveLocationRunnable)
+        handler.postDelayed(liveLocationRunnable, 2 * 60 * 1000)
     }
 
     private fun updateAndSendLocation() {
         emergencyLocationManager.getLastLocation { location ->
-            if (location != null && isValidCoordinates(location.latitude, location.longitude)) {
+            if (location != null && EmergencyLocationManager.isValidLocation(location)) {
                 val mapsLink = "https://maps.google.com/?q=${location.latitude},${location.longitude}"
                 hasSentInitialGpsLink = true
                 Log.i("EmergencyManager", "updateAndSendLocation: Sending confirmed GPS mapsLink=$mapsLink")
                 sendEmergencySms(mapsLink)
             } else {
-                Log.w("EmergencyManager", "Initial location still acquiring fix, dispatching alert and scheduling fast retry...")
-                if (!hasSentInitialGpsLink) {
+                Log.w("EmergencyManager", "Location not immediately available, checking OS native providers...")
+                val immediateNative = emergencyLocationManager.getImmediateBestLocation()
+                if (immediateNative != null && EmergencyLocationManager.isValidLocation(immediateNative)) {
+                    val mapsLink = "https://maps.google.com/?q=${immediateNative.latitude},${immediateNative.longitude}"
+                    hasSentInitialGpsLink = true
+                    Log.i("EmergencyManager", "Sending immediate native location mapsLink=$mapsLink")
+                    sendEmergencySms(mapsLink)
+                } else if (!hasSentInitialGpsLink) {
+                    Log.i("EmergencyManager", "Sending initial alert while GPS fix completes...")
                     sendCustomSms("EMERGENCY ALERT! I need help. Acquiring live GPS lock, confirmed location link following in seconds... ${RemoteSmsReceiver.TRIGGER_KEYWORD}")
                 }
-                
-                // Retry in 3.5 seconds to deliver the verified Google Maps link
-                handler.postDelayed({
-                    emergencyLocationManager.getLastLocation { retryLoc ->
-                        if (retryLoc != null && isValidCoordinates(retryLoc.latitude, retryLoc.longitude)) {
-                            val mapsLink = "https://maps.google.com/?q=${retryLoc.latitude},${retryLoc.longitude}"
-                            hasSentInitialGpsLink = true
-                            Log.i("EmergencyManager", "updateAndSendLocation: Retry delivered valid mapsLink=$mapsLink")
-                            sendCustomSms("LIVE GPS UPDATE! My exact position: $mapsLink ${RemoteSmsReceiver.TRIGGER_KEYWORD}")
-                        } else {
-                            Log.w("EmergencyManager", "Location still unavailable after retry.")
-                        }
-                    }
-                }, 3500)
             }
         }
-    }
-
-    private fun isValidCoordinates(lat: Double, lng: Double): Boolean {
-        return lat != 0.0 && lng != 0.0 && lat in -90.0..90.0 && lng in -180.0..180.0
     }
 
     fun stopEmergencyMode() {
         stopAlarm()
         stopFlashlight()
         stopAudioRecording()
+        emergencyLocationManager.stopContinuousLocationUpdates()
         handler.removeCallbacks(liveLocationRunnable)
     }
 

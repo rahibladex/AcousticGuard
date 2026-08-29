@@ -28,9 +28,16 @@ class EmergencyLocationManager(private val context: Context) {
             private set
 
         fun updateCachedLocation(location: Location?) {
-            if (location != null) {
+            if (location != null && isValidLocation(location)) {
                 lastKnownLocation = location
             }
+        }
+
+        fun isValidLocation(loc: Location?): Boolean {
+            if (loc == null) return false
+            val lat = loc.latitude
+            val lng = loc.longitude
+            return lat != 0.0 && lng != 0.0 && lat in -90.0..90.0 && lng in -180.0..180.0
         }
     }
 
@@ -40,145 +47,143 @@ class EmergencyLocationManager(private val context: Context) {
     }
     private val mainHandler = Handler(Looper.getMainLooper())
     private var continuousLocationCallback: LocationCallback? = null
+    private var nativeLocationListener: LocationListener? = null
 
+    /**
+     * Synchronously returns the immediate best location known to the device.
+     */
+    fun getImmediateBestLocation(): Location? {
+        if (isValidLocation(lastKnownLocation)) {
+            return lastKnownLocation
+        }
+        val nativeLoc = getBestLastKnownNativeLocation()
+        if (isValidLocation(nativeLoc)) {
+            lastKnownLocation = nativeLoc
+            return nativeLoc
+        }
+        return null
+    }
+
+    /**
+     * Gets location with immediate cache return and asynchronous high-accuracy refinement.
+     */
     fun getLastLocation(callback: (Location?) -> Unit) {
         val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
         if (!hasFine && !hasCoarse) {
             Log.w("EmergencyLocation", "No location permissions granted.")
-            callback(lastKnownLocation)
+            callback(getImmediateBestLocation())
             return
         }
 
-        // 1. Check if we already have a reasonably fresh cached location
-        val cached = lastKnownLocation ?: getBestLastKnownNativeLocation()
-        if (cached != null) {
-            val ageMs = System.currentTimeMillis() - cached.time
-            if (ageMs < 120_000) { // Fresh within 2 minutes
-                Log.i("EmergencyLocation", "Delivering fresh cached location: ${cached.latitude}, ${cached.longitude} (age: ${ageMs / 1000}s)")
-                callback(cached)
-                return
-            }
+        // 1. If we have ANY valid cached location from memory or OS, return it immediately so SMS is instant!
+        val immediateLoc = getImmediateBestLocation()
+        if (immediateLoc != null) {
+            Log.i("EmergencyLocation", "Delivering immediate location for instant SMS: ${immediateLoc.latitude}, ${immediateLoc.longitude}")
+            callback(immediateLoc)
+            // Also trigger background refresh to update cache with freshest fix
+            requestFreshFix {}
+            return
         }
 
-        var isCallbackDelivered = false
-        fun deliverResult(location: Location?) {
-            if (!isCallbackDelivered && location != null) {
-                isCallbackDelivered = true
-                updateCachedLocation(location)
-                callback(location)
+        // 2. If no cached location exists at all, actively query Fused + Native with fallback
+        var delivered = false
+        val timeoutRunnable = Runnable {
+            if (!delivered) {
+                delivered = true
+                val fallback = getImmediateBestLocation()
+                Log.w("EmergencyLocation", "GPS query timed out, returning fallback: $fallback")
+                callback(fallback)
             }
         }
+        mainHandler.postDelayed(timeoutRunnable, 4000)
 
-        val cancellationTokenSource = CancellationTokenSource()
+        requestFreshFix { freshLoc ->
+            if (!delivered && freshLoc != null) {
+                delivered = true
+                mainHandler.removeCallbacks(timeoutRunnable)
+                updateCachedLocation(freshLoc)
+                callback(freshLoc)
+            }
+        }
+    }
 
-        // 2. Query Google Play Services FusedLocationProviderClient (lastLocation + fresh high accuracy)
+    private fun requestFreshFix(onResult: (Location?) -> Unit) {
         try {
-            fusedLocationClient.lastLocation
-                .addOnSuccessListener { lastLoc ->
-                    if (lastLoc != null) {
-                        Log.i("EmergencyLocation", "FusedLocation lastLocation acquired: ${lastLoc.latitude}, ${lastLoc.longitude}")
-                        deliverResult(lastLoc)
-                    }
+            fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+                if (isValidLocation(loc)) {
+                    updateCachedLocation(loc)
+                    onResult(loc)
                 }
+            }
 
-            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.token)
-                .addOnSuccessListener { currLoc ->
-                    if (currLoc != null) {
-                        Log.i("EmergencyLocation", "FusedLocation getCurrentLocation (High Accuracy) acquired: ${currLoc.latitude}, ${currLoc.longitude}")
-                        deliverResult(currLoc)
+            val cts = CancellationTokenSource()
+            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token)
+                .addOnSuccessListener { loc ->
+                    if (isValidLocation(loc)) {
+                        updateCachedLocation(loc)
+                        onResult(loc)
                     }
                 }
                 .addOnFailureListener {
-                    // Try balanced power accuracy if high accuracy fails
                     try {
-                        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, cancellationTokenSource.token)
+                        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, cts.token)
                             .addOnSuccessListener { balLoc ->
-                                if (balLoc != null) {
-                                    Log.i("EmergencyLocation", "FusedLocation getCurrentLocation (Balanced) acquired: ${balLoc.latitude}, ${balLoc.longitude}")
-                                    deliverResult(balLoc)
+                                if (isValidLocation(balLoc)) {
+                                    updateCachedLocation(balLoc)
+                                    onResult(balLoc)
                                 }
                             }
                     } catch (e: Exception) {}
                 }
         } catch (e: Exception) {
-            Log.e("EmergencyLocation", "Error querying FusedLocationProviderClient", e)
+            Log.e("EmergencyLocation", "Error in requestFreshFix", e)
         }
 
-        // 3. Fallback: Query native LocationManager last known location
+        // Also query native location manager
         try {
-            val bestNativeLoc = getBestLastKnownNativeLocation()
-            if (bestNativeLoc != null) {
-                deliverResult(bestNativeLoc)
-            }
-        } catch (e: Exception) {
-            Log.e("EmergencyLocation", "Error getting best native location", e)
-        }
-
-        // 4. Fallback: Request single active update using native LocationManager (Network + GPS)
-        try {
-            val listener = object : LocationListener {
-                override fun onLocationChanged(location: Location) {
-                    Log.i("EmergencyLocation", "Native LocationListener update acquired: ${location.latitude}, ${location.longitude}")
-                    try {
-                        locationManager?.removeUpdates(this)
-                    } catch (e: Exception) {}
-                    deliverResult(location)
-                }
-                override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
-                override fun onProviderEnabled(provider: String) {}
-                override fun onProviderDisabled(provider: String) {}
-            }
-
             val providers = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
             for (p in providers) {
-                try {
-                    if (locationManager?.isProviderEnabled(p) == true) {
-                        locationManager.requestLocationUpdates(p, 0L, 0f, listener, Looper.getMainLooper())
+                if (locationManager?.isProviderEnabled(p) == true) {
+                    val last = locationManager?.getLastKnownLocation(p)
+                    if (isValidLocation(last)) {
+                        updateCachedLocation(last)
+                        onResult(last)
                     }
-                } catch (e: Exception) {}
-            }
-
-            // Timeout after 6 seconds - if still nothing fresh, deliver best available fallback
-            mainHandler.postDelayed({
-                if (!isCallbackDelivered) {
-                    isCallbackDelivered = true
-                    try {
-                        locationManager?.removeUpdates(listener)
-                        cancellationTokenSource.cancel()
-                    } catch (e: Exception) {}
-
-                    val fallback = lastKnownLocation ?: getBestLastKnownNativeLocation()
-                    Log.i("EmergencyLocation", "Timeout reached. Delivering fallback location: $fallback")
-                    callback(fallback)
                 }
-            }, 6000)
-        } catch (e: Exception) {
-            Log.e("EmergencyLocation", "Error setting native location listener", e)
-            if (!isCallbackDelivered) {
-                isCallbackDelivered = true
-                callback(lastKnownLocation ?: getBestLastKnownNativeLocation())
             }
-        }
+        } catch (e: Exception) {}
     }
 
-    fun startContinuousLocationUpdates() {
+    fun startContinuousLocationUpdates(onLocationChanged: ((Location) -> Unit)? = null) {
         val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
         if (!hasFine && !hasCoarse) return
 
+        // 1. Initial warm-up from OS cache
+        val initial = getImmediateBestLocation()
+        if (initial != null) {
+            updateCachedLocation(initial)
+            onLocationChanged?.invoke(initial)
+        }
+
+        // 2. Fused Location Provider continuous updates
         try {
-            val request = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 30_000)
-                .setMinUpdateIntervalMillis(15_000)
+            val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10_000)
+                .setMinUpdateIntervalMillis(5_000)
+                .setMinUpdateDistanceMeters(2f)
                 .build()
 
             continuousLocationCallback = object : LocationCallback() {
                 override fun onLocationResult(result: LocationResult) {
                     val loc = result.lastLocation ?: return
-                    Log.d("EmergencyLocation", "Continuous location updated: ${loc.latitude}, ${loc.longitude}")
-                    updateCachedLocation(loc)
+                    if (isValidLocation(loc)) {
+                        Log.d("EmergencyLocation", "Fused continuous location: ${loc.latitude}, ${loc.longitude}")
+                        updateCachedLocation(loc)
+                        onLocationChanged?.invoke(loc)
+                    }
                 }
             }
 
@@ -186,7 +191,33 @@ class EmergencyLocationManager(private val context: Context) {
                 fusedLocationClient.requestLocationUpdates(request, it, Looper.getMainLooper())
             }
         } catch (e: Exception) {
-            Log.e("EmergencyLocation", "Error starting continuous location updates", e)
+            Log.e("EmergencyLocation", "Error starting Fused location updates", e)
+        }
+
+        // 3. Native LocationManager continuous updates (Network & GPS fallback)
+        try {
+            val listener = object : LocationListener {
+                override fun onLocationChanged(location: Location) {
+                    if (isValidLocation(location)) {
+                        Log.d("EmergencyLocation", "Native continuous location: ${location.latitude}, ${location.longitude}")
+                        updateCachedLocation(location)
+                        onLocationChanged?.invoke(location)
+                    }
+                }
+                override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+                override fun onProviderEnabled(provider: String) {}
+                override fun onProviderDisabled(provider: String) {}
+            }
+            nativeLocationListener = listener
+
+            val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+            for (p in providers) {
+                if (locationManager?.isProviderEnabled(p) == true) {
+                    locationManager.requestLocationUpdates(p, 5000L, 2f, listener, Looper.getMainLooper())
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("EmergencyLocation", "Error starting native location listener", e)
         }
     }
 
@@ -197,7 +228,16 @@ class EmergencyLocationManager(private val context: Context) {
             }
             continuousLocationCallback = null
         } catch (e: Exception) {
-            Log.e("EmergencyLocation", "Error stopping continuous location updates", e)
+            Log.e("EmergencyLocation", "Error stopping Fused location updates", e)
+        }
+
+        try {
+            nativeLocationListener?.let {
+                locationManager?.removeUpdates(it)
+            }
+            nativeLocationListener = null
+        } catch (e: Exception) {
+            Log.e("EmergencyLocation", "Error stopping native location updates", e)
         }
     }
 
@@ -218,8 +258,10 @@ class EmergencyLocationManager(private val context: Context) {
             try {
                 if (mgr.allProviders.contains(provider)) {
                     val loc = mgr.getLastKnownLocation(provider) ?: continue
-                    if (bestLocation == null || loc.time > bestLocation.time) {
-                        bestLocation = loc
+                    if (isValidLocation(loc)) {
+                        if (bestLocation == null || loc.time > bestLocation.time) {
+                            bestLocation = loc
+                        }
                     }
                 }
             } catch (e: SecurityException) {

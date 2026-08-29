@@ -674,11 +674,15 @@ class MainActivity : ComponentActivity() {
     private fun updateLocationStatus() {
         if (checkPermissions()) {
             val locManager = EmergencyLocationManager(this)
+            val immediate = locManager.getImmediateBestLocation()
+            if (immediate != null) {
+                gpsStatus = "Active (Fix Acquired)"
+            } else {
+                gpsStatus = "Active (Searching...)"
+            }
             locManager.getLastLocation { loc ->
                 if (loc != null) {
                     gpsStatus = "Active (Fix Acquired)"
-                } else {
-                    gpsStatus = "Active (Searching...)"
                 }
             }
         } else {
