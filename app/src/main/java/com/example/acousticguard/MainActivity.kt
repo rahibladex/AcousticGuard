@@ -80,6 +80,7 @@ class MainActivity : ComponentActivity() {
     private var isRemoteAlertShowing by mutableStateOf(false)
     private var remoteAlertSender by mutableStateOf("")
     private var remoteAlertMapsUrl by mutableStateOf("")
+    private var showPermissionHelperDialog by mutableStateOf(false)
 
     private val audioUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -211,6 +212,10 @@ class MainActivity : ComponentActivity() {
             val sender = if (remoteAlertSender.isNotEmpty()) remoteAlertSender else RemoteAlertService.activeSender
             val mapsUrl = if (remoteAlertMapsUrl.isNotEmpty()) remoteAlertMapsUrl else RemoteAlertService.activeMapsUrl
             RemoteAlarmAlertModal(sender, mapsUrl)
+        }
+
+        if (showPermissionHelperDialog) {
+            PermissionHelperDialog()
         }
     }
 
@@ -780,7 +785,6 @@ class MainActivity : ComponentActivity() {
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.SEND_SMS,
             Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.READ_SMS,
             Manifest.permission.CALL_PHONE
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -797,7 +801,6 @@ class MainActivity : ComponentActivity() {
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.SEND_SMS,
             Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.READ_SMS,
             Manifest.permission.CALL_PHONE
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -812,9 +815,66 @@ class MainActivity : ComponentActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 100 && checkPermissions()) {
-            startSafetyMode()
+        if (requestCode == 100) {
+            if (checkPermissions()) {
+                startSafetyMode()
+            } else {
+                showPermissionHelperDialog = true
+            }
         }
+    }
+
+    @Composable
+    fun PermissionHelperDialog() {
+        AlertDialog(
+            onDismissRequest = { showPermissionHelperDialog = false },
+            containerColor = SurfaceDark,
+            titleContentColor = RoyalPurple,
+            textContentColor = TextPrimary,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Security, contentDescription = null, tint = RoyalPurple)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Permission Setup Guide", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "On Android 13/14/15+, sideloaded safety apps require restricted settings authorization to send emergency SMS and monitor alerts:",
+                        fontSize = 13.sp,
+                        color = TextSecondary
+                    )
+                    Text("1. Tap 'Open App Settings' below", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("2. Tap the 3 dots (⋮) in the top-right corner", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("3. Tap 'Allow restricted settings'", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = RoyalPurple)
+                    Text("4. Tap 'Permissions' & allow SMS, Mic, Location", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPermissionHelperDialog = false
+                        try {
+                            val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", packageName, null)
+                            }
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(this@MainActivity, "Could not open settings", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = RoyalPurple, contentColor = Color.White)
+                ) {
+                    Text("Open App Settings")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPermissionHelperDialog = false }) {
+                    Text("Close", color = TextSecondary)
+                }
+            }
+        )
     }
 
     private fun removeContact(contact: String) {
