@@ -41,7 +41,25 @@ Download the latest APK release from the [GitHub Releases](https://github.com/ra
 
 ## 📜 Version History
 
-### v7.0.0 (The Ultimate Guardian & Stability Release) — *Latest*
+### v8.0.0 (The Ironclad Concurrency & OEM Protection Release) — *Latest*
+- **🎙️ Instant Hardware Microphone Release**:
+  - Rewrote `AudioDetectionService` with `@Volatile` recording states, thread-safe synchronized locks, and immediate `AudioRecord.stop()` and `release()` on STOP TRACKING.
+  - Resolved UI race conditions so `AI Detection: OFF` resets instantaneously.
+- **⚡ Background Battery Optimization Exemption**:
+  - Added dedicated **Background Protection** card under Settings with 1-tap whitelisting from aggressive OEM battery killers (**Samsung OneUI, Xiaomi HyperOS, OnePlus OxygenOS, Vivo/Oppo**).
+- **🛡️ Full Android 14 (API 34) Foreground Service Compliance**:
+  - Declared `FOREGROUND_SERVICE_MICROPHONE`, `FOREGROUND_SERVICE_LOCATION`, and `FOREGROUND_SERVICE_MEDIA_PLAYBACK`.
+  - Service initialization strictly passes bitwise-OR matching types into `ServiceCompat.startForeground`.
+- **📍 Verified GPS Link Validation & Dual-Phase SMS Dispatch**:
+  - Added strict coordinate validation preventing invalid `(0, 0)` or null Google Maps links.
+  - Implemented automatic fast 3.5s retry for instant indoors fix with immediate follow-up SMS.
+- **🔒 Thread-Safe Hardware Strobes & AudioFocus Contention Handling**:
+  - Added explicit thread `.join()` on Camera2 strobe thread and ToneGenerator shutoff to eliminate asynchronous HAL race conditions.
+  - Integrated `AudioManager.OnAudioFocusChangeListener` and `AudioFocusRequest` to gracefully pause and resume during phone calls.
+- **⚡ Zero-ANR Async TFLite Inference**:
+  - Converted model loading in `AudioClassifier` to single-thread background executors preventing main-thread blocking.
+
+### v7.0.0 (The Ultimate Guardian & Stability Release)
 - **🚨 Remote SOS Siren Sync**:
   - Implemented `RemoteAlertService` foreground service with `FOREGROUND_SERVICE_MEDIA_PLAYBACK` and `WAKE_LOCK`.
   - Automatically forces `AudioManager.STREAM_ALARM` to 100% max volume with `FLAG_AUDIBILITY_ENFORCED`.
