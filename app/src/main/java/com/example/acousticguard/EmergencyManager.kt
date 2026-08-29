@@ -39,10 +39,12 @@ class EmergencyManager(private val context: Context) {
     
     private val emergencyLocationManager = EmergencyLocationManager(context)
     private val handler = Handler(Looper.getMainLooper())
+    private var hasSentInitialGpsLink = false
+
     private val liveLocationRunnable = object : Runnable {
         override fun run() {
             updateAndSendLocation()
-            handler.postDelayed(this, 2 * 60 * 1000) // Send every 2 minutes
+            handler.postDelayed(this, 2 * 60 * 1000) // Send update every 2 minutes
         }
     }
 
@@ -57,6 +59,7 @@ class EmergencyManager(private val context: Context) {
     }
 
     fun activateEmergencyMode() {
+        hasSentInitialGpsLink = false
         val prefs = context.getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
         val isSilent = prefs.getBoolean("silent_sos_mode", false)
 
@@ -83,25 +86,36 @@ class EmergencyManager(private val context: Context) {
 
     private fun updateAndSendLocation() {
         emergencyLocationManager.getLastLocation { location ->
-            if (location != null) {
+            if (location != null && isValidCoordinates(location.latitude, location.longitude)) {
                 val mapsLink = "https://maps.google.com/?q=${location.latitude},${location.longitude}"
+                hasSentInitialGpsLink = true
                 Log.i("EmergencyManager", "updateAndSendLocation: Sending confirmed GPS mapsLink=$mapsLink")
                 sendEmergencySms(mapsLink)
             } else {
-                Log.w("EmergencyManager", "Initial location still resolving, retrying in 3.5s for GPS/Network fix...")
+                Log.w("EmergencyManager", "Initial location still acquiring fix, dispatching alert and scheduling fast retry...")
+                if (!hasSentInitialGpsLink) {
+                    sendCustomSms("EMERGENCY ALERT! I need help. Acquiring live GPS lock, confirmed location link following in seconds... ${RemoteSmsReceiver.TRIGGER_KEYWORD}")
+                }
+                
+                // Retry in 3.5 seconds to deliver the verified Google Maps link
                 handler.postDelayed({
                     emergencyLocationManager.getLastLocation { retryLoc ->
-                        val mapsLink = if (retryLoc != null) {
-                            "https://maps.google.com/?q=${retryLoc.latitude},${retryLoc.longitude}"
+                        if (retryLoc != null && isValidCoordinates(retryLoc.latitude, retryLoc.longitude)) {
+                            val mapsLink = "https://maps.google.com/?q=${retryLoc.latitude},${retryLoc.longitude}"
+                            hasSentInitialGpsLink = true
+                            Log.i("EmergencyManager", "updateAndSendLocation: Retry delivered valid mapsLink=$mapsLink")
+                            sendCustomSms("LIVE GPS UPDATE! My exact position: $mapsLink ${RemoteSmsReceiver.TRIGGER_KEYWORD}")
                         } else {
-                            "Location not available"
+                            Log.w("EmergencyManager", "Location still unavailable after retry.")
                         }
-                        Log.i("EmergencyManager", "updateAndSendLocation: Retry delivered mapsLink=$mapsLink")
-                        sendEmergencySms(mapsLink)
                     }
                 }, 3500)
             }
         }
+    }
+
+    private fun isValidCoordinates(lat: Double, lng: Double): Boolean {
+        return lat != 0.0 && lng != 0.0 && lat in -90.0..90.0 && lng in -180.0..180.0
     }
 
     fun stopEmergencyMode() {
@@ -205,7 +219,11 @@ class EmergencyManager(private val context: Context) {
         synchronized(alarmLock) {
             isAlarmActive = false
             alarmThread?.interrupt()
+            try {
+                alarmThread?.join(250)
+            } catch (e: Exception) {}
             alarmThread = null
+            
             try {
                 toneGen?.stopTone()
                 toneGen?.release()
@@ -241,10 +259,13 @@ class EmergencyManager(private val context: Context) {
                 var toggle = true
                 while (isFlashActive && !Thread.currentThread().isInterrupted) {
                     try {
-                        for (id in cameraIds) {
-                            try {
-                                cameraManager.setTorchMode(id, toggle)
-                            } catch (e: Exception) {}
+                        synchronized(flashLock) {
+                            if (!isFlashActive) return@Thread
+                            for (id in cameraIds) {
+                                try {
+                                    cameraManager.setTorchMode(id, toggle)
+                                } catch (e: Exception) {}
+                            }
                         }
                         toggle = !toggle
                         Thread.sleep(350)
@@ -254,7 +275,7 @@ class EmergencyManager(private val context: Context) {
                         break
                     }
                 }
-                // Ensure flashlight is OFF when loop terminates
+                // Force torch OFF upon termination
                 for (id in cameraIds) {
                     try {
                         cameraManager.setTorchMode(id, false)
@@ -271,21 +292,24 @@ class EmergencyManager(private val context: Context) {
         synchronized(flashLock) {
             isFlashActive = false
             flashThread?.interrupt()
+            try {
+                flashThread?.join(250)
+            } catch (e: Exception) {}
             flashThread = null
-        }
-        
-        // Immediate hardware torch shut-off
-        try {
-            val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
-            if (cameraManager != null) {
-                for (id in cameraManager.cameraIdList) {
-                    try {
-                        cameraManager.setTorchMode(id, false)
-                    } catch (e: Exception) {}
+            
+            // Unconditional hardware torch shut-off across all cameras
+            try {
+                val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
+                cameraManager?.let { mgr ->
+                    for (id in mgr.cameraIdList) {
+                        try {
+                            mgr.setTorchMode(id, false)
+                        } catch (e: Exception) {}
+                    }
                 }
+            } catch (e: Exception) {
+                Log.e("EmergencyManager", "Failed to shut off torch in stopFlashlight", e)
             }
-        } catch (e: Exception) {
-            Log.e("EmergencyManager", "Failed to shut off torch in stopFlashlight", e)
         }
     }
 
