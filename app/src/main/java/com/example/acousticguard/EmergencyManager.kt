@@ -83,13 +83,24 @@ class EmergencyManager(private val context: Context) {
 
     private fun updateAndSendLocation() {
         emergencyLocationManager.getLastLocation { location ->
-            val mapsLink = if (location != null) {
-                "https://maps.google.com/?q=${location.latitude},${location.longitude}"
+            if (location != null) {
+                val mapsLink = "https://maps.google.com/?q=${location.latitude},${location.longitude}"
+                Log.i("EmergencyManager", "updateAndSendLocation: Sending confirmed GPS mapsLink=$mapsLink")
+                sendEmergencySms(mapsLink)
             } else {
-                "Location not available"
+                Log.w("EmergencyManager", "Initial location still resolving, retrying in 3.5s for GPS/Network fix...")
+                handler.postDelayed({
+                    emergencyLocationManager.getLastLocation { retryLoc ->
+                        val mapsLink = if (retryLoc != null) {
+                            "https://maps.google.com/?q=${retryLoc.latitude},${retryLoc.longitude}"
+                        } else {
+                            "Location not available"
+                        }
+                        Log.i("EmergencyManager", "updateAndSendLocation: Retry delivered mapsLink=$mapsLink")
+                        sendEmergencySms(mapsLink)
+                    }
+                }, 3500)
             }
-            Log.i("EmergencyManager", "updateAndSendLocation: mapsLink=$mapsLink, loc=$location")
-            sendEmergencySms(mapsLink)
         }
     }
 

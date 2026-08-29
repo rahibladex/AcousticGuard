@@ -38,6 +38,7 @@ class AudioDetectionService : Service() {
     private lateinit var sensorManager: SensorManager
     private var shakeDetector: ShakeDetector? = null
     private lateinit var emergencyManager: EmergencyManager
+    private lateinit var emergencyLocationManager: EmergencyLocationManager
 
     private var lowBatteryAlertSent = false
     private val batteryReceiver = object : BroadcastReceiver() {
@@ -67,6 +68,7 @@ class AudioDetectionService : Service() {
         createNotificationChannel()
         audioClassifier = AudioClassifier(this)
         emergencyManager = EmergencyManager(this)
+        emergencyLocationManager = EmergencyLocationManager(this)
         
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         setupShakeDetector()
@@ -114,12 +116,13 @@ class AudioDetectionService : Service() {
                 this,
                 1,
                 notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
             )
         } else {
             startForeground(1, notification)
         }
 
+        emergencyLocationManager.startContinuousLocationUpdates()
         stopAudioRecording()
         startAudioRecording()
 
@@ -286,6 +289,7 @@ class AudioDetectionService : Service() {
 
     override fun onDestroy() {
         stopAudioRecording()
+        emergencyLocationManager.stopContinuousLocationUpdates()
         
         shakeDetector?.let {
             try {
