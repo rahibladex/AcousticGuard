@@ -25,15 +25,17 @@ class EmergencyManager(private val context: Context) {
         var isFlashActive = false
             private set
 
+        @Volatile
+        private var mediaRecorder: MediaRecorder? = null
+
         private var toneGen: ToneGenerator? = null
         private var flashThread: Thread? = null
         private var alarmThread: Thread? = null
 
         private val flashLock = Any()
         private val alarmLock = Any()
+        private val recorderLock = Any()
     }
-
-    private var mediaRecorder: MediaRecorder? = null
     
     private val emergencyLocationManager = EmergencyLocationManager(context)
     private val handler = Handler(Looper.getMainLooper())
@@ -277,39 +279,45 @@ class EmergencyManager(private val context: Context) {
     }
 
     private fun startAudioRecording() {
-        try {
-            val fileName = "${context.getExternalFilesDir(null)}/emergency_audio_${System.currentTimeMillis()}.mp4"
-            val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                MediaRecorder(context)
-            } else {
-                @Suppress("DEPRECATION")
-                MediaRecorder()
+        synchronized(recorderLock) {
+            if (mediaRecorder != null) return
+            try {
+                val fileName = "${context.getExternalFilesDir(null)}/emergency_audio_${System.currentTimeMillis()}.mp4"
+                val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    MediaRecorder(context)
+                } else {
+                    @Suppress("DEPRECATION")
+                    MediaRecorder()
+                }
+                recorder.apply {
+                    setAudioSource(MediaRecorder.AudioSource.MIC)
+                    setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                    setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                    setOutputFile(fileName)
+                    prepare()
+                    start()
+                }
+                mediaRecorder = recorder
+                Log.i("EmergencyManager", "Audio recording started: $fileName")
+            } catch (e: Exception) {
+                Log.e("EmergencyManager", "Failed to start audio recording", e)
             }
-            recorder.apply {
-                setAudioSource(MediaRecorder.AudioSource.MIC)
-                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-                setOutputFile(fileName)
-                prepare()
-                start()
-            }
-            mediaRecorder = recorder
-            Log.i("EmergencyManager", "Audio recording started: $fileName")
-        } catch (e: Exception) {
-            Log.e("EmergencyManager", "Failed to start audio recording", e)
         }
     }
 
     private fun stopAudioRecording() {
-        try {
-            mediaRecorder?.apply {
-                stop()
-                release()
+        synchronized(recorderLock) {
+            try {
+                mediaRecorder?.apply {
+                    try { stop() } catch (e: Exception) {}
+                    try { release() } catch (e: Exception) {}
+                }
+            } catch (e: Exception) {
+                Log.e("EmergencyManager", "Failed to stop audio recording", e)
+            } finally {
+                mediaRecorder = null
+                Log.i("EmergencyManager", "Audio recording stopped and released")
             }
-            mediaRecorder = null
-            Log.i("EmergencyManager", "Audio recording stopped")
-        } catch (e: Exception) {
-            Log.e("EmergencyManager", "Failed to stop audio recording", e)
         }
     }
 

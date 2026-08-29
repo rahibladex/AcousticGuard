@@ -25,8 +25,13 @@ import kotlin.math.log10
 class AudioDetectionService : Service() {
 
     private val CHANNEL_ID = "AcousticGuardServiceChannel"
+
+    @Volatile
     private var isRecording = false
     private var audioRecord: AudioRecord? = null
+    private var recordingThread: Thread? = null
+    private val audioLock = Any()
+
     private lateinit var audioClassifier: AudioClassifier
     private var screamConfidenceCount = 0
     
@@ -52,6 +57,7 @@ class AudioDetectionService : Service() {
     companion object {
         const val ACTION_AUDIO_UPDATE = "com.example.acousticguard.AUDIO_UPDATE"
         const val ACTION_EMERGENCY_CONFIRM = "com.example.acousticguard.EMERGENCY_CONFIRM"
+        const val ACTION_STOP_SERVICE = "com.example.acousticguard.ACTION_STOP_SERVICE"
         const val EXTRA_LOUDNESS = "extra_loudness"
         const val EXTRA_EVENT = "extra_event"
     }
@@ -65,7 +71,11 @@ class AudioDetectionService : Service() {
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         setupShakeDetector()
 
-        registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        try {
+            registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        } catch (e: Exception) {
+            Log.e("AudioDetection", "Failed to register battery receiver", e)
+        }
     }
 
     private fun setupShakeDetector() {
@@ -75,18 +85,28 @@ class AudioDetectionService : Service() {
         }
         
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        sensorManager.registerListener(
-            shakeDetector,
-            accelerometer,
-            SensorManager.SENSOR_DELAY_UI
-        )
+        if (accelerometer != null) {
+            sensorManager.registerListener(
+                shakeDetector,
+                accelerometer,
+                SensorManager.SENSOR_DELAY_UI
+            )
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_STOP_SERVICE) {
+            Log.i("AudioDetection", "Received ACTION_STOP_SERVICE, stopping service completely.")
+            stopAudioRecording()
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("TEJASHWINI Active")
             .setContentText("Safety Mode is monitoring audio...")
             .setSmallIcon(R.drawable.app_logo)
+            .setOngoing(true)
             .build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -100,6 +120,7 @@ class AudioDetectionService : Service() {
             startForeground(1, notification)
         }
 
+        stopAudioRecording()
         startAudioRecording()
 
         return START_NOT_STICKY
@@ -113,72 +134,124 @@ class AudioDetectionService : Service() {
                 NotificationManager.IMPORTANCE_LOW
             )
             val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(serviceChannel)
+            manager?.createNotificationChannel(serviceChannel)
         }
     }
 
     private fun startAudioRecording() {
-        val sampleRate = 16000
-        val channelConfig = AudioFormat.CHANNEL_IN_MONO
-        val audioFormat = AudioFormat.ENCODING_PCM_16BIT
-        val bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
+        synchronized(audioLock) {
+            if (isRecording) return
+            
+            val sampleRate = 16000
+            val channelConfig = AudioFormat.CHANNEL_IN_MONO
+            val audioFormat = AudioFormat.ENCODING_PCM_16BIT
+            val bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
+            
+            if (bufferSize <= 0) {
+                Log.e("AudioDetection", "Invalid buffer size for AudioRecord: $bufferSize")
+                return
+            }
 
-        try {
-            audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
-                sampleRate,
-                channelConfig,
-                audioFormat,
-                bufferSize
-            )
+            try {
+                val record = AudioRecord(
+                    MediaRecorder.AudioSource.MIC,
+                    sampleRate,
+                    channelConfig,
+                    audioFormat,
+                    bufferSize * 2
+                )
 
-            audioRecord?.startRecording()
-            isRecording = true
-
-            Thread {
-                val buffer = ShortArray(bufferSize)
-                while (isRecording) {
-                    val readResult = audioRecord?.read(buffer, 0, buffer.size) ?: 0
-                    if (readResult > 0) {
-                        processAudioBuffer(buffer, readResult)
-                    }
+                if (record.state != AudioRecord.STATE_INITIALIZED) {
+                    Log.e("AudioDetection", "AudioRecord failed to initialize")
+                    record.release()
+                    return
                 }
-            }.start()
-        } catch (e: SecurityException) {
-            Log.e("AudioDetection", "Permission denied for recording audio")
+
+                record.startRecording()
+                audioRecord = record
+                isRecording = true
+
+                val thread = Thread({
+                    val buffer = ShortArray(bufferSize)
+                    while (isRecording && !Thread.currentThread().isInterrupted) {
+                        val recordInstance = audioRecord ?: break
+                        val readResult = try {
+                            recordInstance.read(buffer, 0, buffer.size)
+                        } catch (e: Exception) {
+                            -1
+                        }
+
+                        if (readResult > 0 && isRecording) {
+                            processAudioBuffer(buffer, readResult)
+                        } else if (readResult < 0) {
+                            break
+                        }
+                    }
+                    Log.i("AudioDetection", "Audio processing thread exited.")
+                }, "AudioDetectionWorkerThread")
+
+                thread.isDaemon = true
+                thread.start()
+                recordingThread = thread
+                Log.i("AudioDetection", "Audio recording started successfully.")
+            } catch (e: SecurityException) {
+                Log.e("AudioDetection", "Permission denied for recording audio", e)
+            } catch (e: Exception) {
+                Log.e("AudioDetection", "Failed to start AudioRecord", e)
+            }
+        }
+    }
+
+    private fun stopAudioRecording() {
+        synchronized(audioLock) {
+            isRecording = false
+            
+            recordingThread?.interrupt()
+            recordingThread = null
+
+            try {
+                audioRecord?.let { record ->
+                    if (record.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+                        try {
+                            record.stop()
+                        } catch (e: Exception) {
+                            Log.w("AudioDetection", "Exception while stopping AudioRecord", e)
+                        }
+                    }
+                    record.release()
+                }
+            } catch (e: Exception) {
+                Log.e("AudioDetection", "Error releasing AudioRecord", e)
+            } finally {
+                audioRecord = null
+                Log.i("AudioDetection", "Microphone completely released and stopped.")
+            }
         }
     }
 
     private fun processAudioBuffer(buffer: ShortArray, readSize: Int) {
-        // Calculate RMS (Root Mean Square) for loudness
         var sum = 0.0
         for (i in 0 until readSize) {
             sum += buffer[i] * buffer[i]
         }
         val rms = Math.sqrt(sum / readSize)
         
-        // Convert to decibels (approximate)
         var db = 0.0
         if (rms > 0) {
             db = 20 * log10(rms)
         }
 
-        // Get user-defined threshold
         val prefs = getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
         val threshold = prefs.getInt("detection_sensitivity", 80)
 
-        // Pass dummy features (for prototype), loudness, and threshold to AudioClassifier
         val dummyFeatures = FloatArray(0)
         val classification = audioClassifier.classifyAudio(dummyFeatures, db, threshold)
         
         val eventLabel = classification.first
         val confidence = classification.second
 
-        // Voice SOS (Keyword Detection Placeholder)
         val voiceSosEnabled = prefs.getBoolean("voice_sos", false)
         if (voiceSosEnabled && db > threshold + 10) { 
-            // Simple heuristic: if it's loud and voice SOS is enabled, trigger confirmation
-            // This acts as a placeholder for actual "Help Me" keyword spotting
             Log.i("AudioDetection", "Voice SOS placeholder triggered")
             val confirmIntent = Intent(ACTION_EMERGENCY_CONFIRM).apply {
                 setPackage(packageName)
@@ -190,11 +263,9 @@ class AudioDetectionService : Service() {
             screamConfidenceCount++
             Log.d("AudioDetection", "Scream detected. Count: $screamConfidenceCount")
         } else {
-            // Reset if the consecutive requirement is broken
             screamConfidenceCount = 0
         }
 
-        // Broadcast loudness and event back to MainActivity
         val intent = Intent(ACTION_AUDIO_UPDATE).apply {
             setPackage(packageName)
             putExtra(EXTRA_LOUDNESS, db)
@@ -202,9 +273,8 @@ class AudioDetectionService : Service() {
         }
         sendBroadcast(intent)
 
-        // Trigger emergency confirmation if 3 consecutive high-confidence windows are detected
         if (screamConfidenceCount >= 3) {
-            screamConfidenceCount = 0 // Reset
+            screamConfidenceCount = 0
             val confirmIntent = Intent(ACTION_EMERGENCY_CONFIRM).apply {
                 setPackage(packageName)
             }
@@ -213,17 +283,29 @@ class AudioDetectionService : Service() {
     }
 
     override fun onDestroy() {
-        isRecording = false
-        audioRecord?.stop()
-        audioRecord?.release()
-        audioRecord = null
+        stopAudioRecording()
         
         shakeDetector?.let {
-            sensorManager.unregisterListener(it)
+            try {
+                sensorManager.unregisterListener(it)
+            } catch (e: Exception) {}
         }
 
-        unregisterReceiver(batteryReceiver)
-        
+        try {
+            unregisterReceiver(batteryReceiver)
+        } catch (e: Exception) {}
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
+        } catch (e: Exception) {
+            Log.e("AudioDetection", "Error in stopForeground", e)
+        }
+
         super.onDestroy()
     }
 

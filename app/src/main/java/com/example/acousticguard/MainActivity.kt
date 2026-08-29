@@ -698,8 +698,14 @@ class MainActivity : ComponentActivity() {
         gpsStatus = "GPS : OFF"
         motionStatus = "Motion SOS:\nInactive"
         
-        val serviceIntent = Intent(this, AudioDetectionService::class.java)
+        val serviceIntent = Intent(this, AudioDetectionService::class.java).apply {
+            action = AudioDetectionService.ACTION_STOP_SERVICE
+        }
+        try {
+            startService(serviceIntent)
+        } catch (e: Exception) {}
         stopService(serviceIntent)
+        emergencyManager.stopEmergencyMode()
         Toast.makeText(this, "Safety Mode Stopped", Toast.LENGTH_SHORT).show()
     }
 
@@ -800,6 +806,17 @@ class MainActivity : ComponentActivity() {
         ActivityCompat.requestPermissions(this, permissions.toTypedArray(), 100)
     }
 
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 100 && checkPermissions()) {
+            startSafetyMode()
+        }
+    }
+
     private fun removeContact(contact: String) {
         val prefs = getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
         val current = trustedContacts.toMutableSet()
@@ -881,5 +898,13 @@ class MainActivity : ComponentActivity() {
         try {
             unregisterReceiver(dynamicSmsReceiver)
         } catch (e: Exception) {}
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (isSafetyModeActive) {
+            stopSafetyMode()
+        }
+        emergencyManager.stopEmergencyMode()
     }
 }
