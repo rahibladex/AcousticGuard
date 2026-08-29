@@ -86,12 +86,16 @@ class MainActivity : ComponentActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 AudioDetectionService.ACTION_AUDIO_UPDATE -> {
+                    if (!isSafetyModeActive) {
+                        aiStatus = "AI Detection: OFF"
+                        return
+                    }
                     val db = intent.getDoubleExtra(AudioDetectionService.EXTRA_LOUDNESS, 0.0)
                     val event = intent.getStringExtra(AudioDetectionService.EXTRA_EVENT)
                     aiStatus = if (event.isNullOrEmpty()) {
-                        "AI Detection:\nON"
+                        "AI Detection: ON"
                     } else {
-                        "AI Detection:\nON ($event)"
+                        "AI Detection: ON ($event)"
                     }
                 }
                 AudioDetectionService.ACTION_EMERGENCY_CONFIRM -> {
@@ -300,13 +304,13 @@ class MainActivity : ComponentActivity() {
             StatusCard(
                 modifier = Modifier.weight(1f),
                 title = "AI AUDIO",
-                status = aiStatus,
+                status = if (isSafetyModeActive) aiStatus else "AI Detection: OFF",
                 icon = Icons.Default.Mic
             )
             StatusCard(
                 modifier = Modifier.weight(1f),
                 title = "MOTION SOS",
-                status = motionStatus,
+                status = if (isSafetyModeActive) motionStatus else "Motion SOS: Inactive",
                 icon = Icons.Default.DirectionsRun
             )
         }

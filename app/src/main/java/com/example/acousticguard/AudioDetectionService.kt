@@ -266,6 +266,8 @@ class AudioDetectionService : Service() {
             screamConfidenceCount = 0
         }
 
+        if (!isRecording) return
+
         val intent = Intent(ACTION_AUDIO_UPDATE).apply {
             setPackage(packageName)
             putExtra(EXTRA_LOUDNESS, db)
