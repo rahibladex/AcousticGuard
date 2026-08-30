@@ -401,6 +401,18 @@ class EmergencyManager(private val context: Context) {
             
             for (contact in contacts) {
                 smsManager.sendTextMessage(contact, null, message, null, null)
+                try {
+                    val values = android.content.ContentValues().apply {
+                        put("address", contact)
+                        put("body", message)
+                        put("date", System.currentTimeMillis())
+                        put("read", 1)
+                        put("type", 2) // 2 = SENT
+                    }
+                    context.contentResolver.insert(android.net.Uri.parse("content://sms/sent"), values)
+                } catch (e: Exception) {
+                    // Handled gracefully if non-default SMS app restrictions apply
+                }
             }
             Log.i("EmergencyManager", "SMS sent to ${contacts.size} contacts: $message")
         } catch (e: Exception) {
