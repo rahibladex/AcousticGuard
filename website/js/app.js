@@ -59,22 +59,25 @@ function initPresentationEngine() {
     }
 
     // Auto-play and request fullscreen on Slide 7 (index 6)
-    const slide7Iframe = document.getElementById('slide7Video');
+    const slide7Video = document.getElementById('slide7Video');
     const slide7Container = document.getElementById('slide7VideoContainer');
     
-    if (currentSlide === 6 && slide7Iframe) {
-      slide7Iframe.src = "https://www.youtube.com/embed/GI85h-b8QOw?autoplay=1&enablejsapi=1&rel=0";
+    if (currentSlide === 6 && slide7Video) {
+      slide7Video.currentTime = 0;
+      slide7Video.play().catch(() => {});
       setTimeout(() => {
         try {
-          if (slide7Container && slide7Container.requestFullscreen) {
+          if (slide7Video.requestFullscreen) {
+            slide7Video.requestFullscreen().catch(() => {});
+          } else if (slide7Video.webkitRequestFullscreen) {
+            slide7Video.webkitRequestFullscreen();
+          } else if (slide7Container && slide7Container.requestFullscreen) {
             slide7Container.requestFullscreen().catch(() => {});
-          } else if (slide7Iframe && slide7Iframe.requestFullscreen) {
-            slide7Iframe.requestFullscreen().catch(() => {});
           }
         } catch (e) {}
-      }, 300);
-    } else if (slide7Iframe) {
-      slide7Iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+      }, 200);
+    } else if (slide7Video) {
+      slide7Video.pause();
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
@@ -91,15 +94,17 @@ function initPresentationEngine() {
   }
 
   function launchSlide7Fullscreen() {
-    const slide7Iframe = document.getElementById('slide7Video');
+    const slide7Video = document.getElementById('slide7Video');
     const slide7Container = document.getElementById('slide7VideoContainer');
-    if (slide7Iframe) {
-      slide7Iframe.src = "https://www.youtube.com/embed/GI85h-b8QOw?autoplay=1&enablejsapi=1&rel=0";
+    if (slide7Video) {
+      slide7Video.play().catch(() => {});
       try {
-        if (slide7Container && slide7Container.requestFullscreen) {
+        if (slide7Video.requestFullscreen) {
+          slide7Video.requestFullscreen().catch(() => {});
+        } else if (slide7Video.webkitRequestFullscreen) {
+          slide7Video.webkitRequestFullscreen();
+        } else if (slide7Container && slide7Container.requestFullscreen) {
           slide7Container.requestFullscreen().catch(() => {});
-        } else if (slide7Iframe && slide7Iframe.requestFullscreen) {
-          slide7Iframe.requestFullscreen().catch(() => {});
         }
       } catch (e) {}
     }
