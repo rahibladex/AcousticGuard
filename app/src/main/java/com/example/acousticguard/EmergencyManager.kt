@@ -1,5 +1,6 @@
 package com.example.acousticguard
 
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -80,7 +81,7 @@ class EmergencyManager(private val context: Context) {
 
         startAudioRecording()
         
-        // 1. Start continuous location tracking
+        // 1. Start continuous high-accuracy location streaming
         emergencyLocationManager.startContinuousLocationUpdates { freshLocation ->
             if (!hasSentInitialGpsLink && EmergencyLocationManager.isValidLocation(freshLocation)) {
                 hasSentInitialGpsLink = true
@@ -90,7 +91,7 @@ class EmergencyManager(private val context: Context) {
             }
         }
 
-        // 2. Dispatch the initial emergency SMS with guaranteed Google Maps link
+        // 2. Dispatch initial emergency SMS with instant multi-provider fallback
         dispatchEmergencySmsWithConfirmedLocation(attempt = 1)
 
         // 3. Schedule 2-minute live location beacon loop
@@ -101,28 +102,41 @@ class EmergencyManager(private val context: Context) {
     private fun dispatchEmergencySmsWithConfirmedLocation(attempt: Int) {
         if (hasSentInitialGpsLink) return
 
+        // Check 0ms immediate cache first
+        val immediateLoc = emergencyLocationManager.getImmediateBestLocation()
+        if (immediateLoc != null && EmergencyLocationManager.isValidLocation(immediateLoc)) {
+            hasSentInitialGpsLink = true
+            val mapsLink = "https://maps.google.com/?q=${immediateLoc.latitude},${immediateLoc.longitude}"
+            Log.i("EmergencyManager", "dispatchEmergencySms: Sending immediate coordinates: $mapsLink")
+            sendEmergencySms(mapsLink)
+            return
+        }
+
+        // Actively query fresh location
         emergencyLocationManager.getLastLocation { location ->
+            if (hasSentInitialGpsLink) return@getLastLocation
+
             if (location != null && EmergencyLocationManager.isValidLocation(location)) {
                 hasSentInitialGpsLink = true
                 val mapsLink = "https://maps.google.com/?q=${location.latitude},${location.longitude}"
-                Log.i("EmergencyManager", "dispatchEmergencySms: Sending verified mapsLink=$mapsLink on attempt $attempt")
+                Log.i("EmergencyManager", "dispatchEmergencySms: Fresh fix received: $mapsLink")
                 sendEmergencySms(mapsLink)
+            } else if (attempt <= 3) {
+                Log.w("EmergencyManager", "Location still acquiring, retrying in 1s (attempt $attempt/3)...")
+                handler.postDelayed({
+                    dispatchEmergencySmsWithConfirmedLocation(attempt + 1)
+                }, 1000)
             } else {
-                val immediateLoc = emergencyLocationManager.getImmediateBestLocation()
-                if (immediateLoc != null && EmergencyLocationManager.isValidLocation(immediateLoc)) {
-                    hasSentInitialGpsLink = true
-                    val mapsLink = "https://maps.google.com/?q=${immediateLoc.latitude},${immediateLoc.longitude}"
-                    Log.i("EmergencyManager", "dispatchEmergencySms: Immediate fallback mapsLink=$mapsLink")
-                    sendEmergencySms(mapsLink)
-                } else if (attempt <= 10) {
-                    // Retry every 1000ms until GPS satellite/network lock resolves
-                    Log.w("EmergencyManager", "Location still locking, retrying in 1s (attempt $attempt/10)...")
-                    handler.postDelayed({
-                        dispatchEmergencySmsWithConfirmedLocation(attempt + 1)
-                    }, 1000)
+                // If fine GPS takes longer than 3 seconds, deliver best available or emergency beacon
+                val fallbackLoc = emergencyLocationManager.getImmediateBestLocation()
+                val mapsLink = if (fallbackLoc != null && EmergencyLocationManager.isValidLocation(fallbackLoc)) {
+                    "https://maps.google.com/?q=${fallbackLoc.latitude},${fallbackLoc.longitude}"
                 } else {
-                    Log.e("EmergencyManager", "Could not lock location after 10 seconds.")
+                    "https://maps.google.com"
                 }
+                hasSentInitialGpsLink = true
+                Log.i("EmergencyManager", "dispatchEmergencySms: 3s timeout reached, dispatching SMS: $mapsLink")
+                sendEmergencySms(mapsLink)
             }
         }
     }
@@ -132,7 +146,7 @@ class EmergencyManager(private val context: Context) {
             val loc = location ?: emergencyLocationManager.getImmediateBestLocation()
             if (loc != null && EmergencyLocationManager.isValidLocation(loc)) {
                 val mapsLink = "https://maps.google.com/?q=${loc.latitude},${loc.longitude}"
-                Log.i("EmergencyManager", "sendLiveLocationUpdate: Sending 2-min update $mapsLink")
+                Log.i("EmergencyManager", "sendLiveLocationUpdate: Sending 2-min update: $mapsLink")
                 sendEmergencySms(mapsLink)
             }
         }
@@ -165,17 +179,20 @@ class EmergencyManager(private val context: Context) {
         
         val primaryContact = contacts.firstOrNull()
         if (primaryContact != null) {
-            try {
-                val intent = Intent(Intent.ACTION_CALL).apply {
-                    data = Uri.parse("tel:$primaryContact")
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val cleanNumber = primaryContact.replace("[^0-9+]".toRegex(), "").trim()
+            if (cleanNumber.isNotEmpty()) {
+                try {
+                    val intent = Intent(Intent.ACTION_CALL).apply {
+                        data = Uri.parse("tel:$cleanNumber")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                    Log.i("EmergencyManager", "Emergency call initiated to $cleanNumber")
+                } catch (e: SecurityException) {
+                    Log.e("EmergencyManager", "Permission denied for CALL_PHONE", e)
+                } catch (e: Exception) {
+                    Log.e("EmergencyManager", "Failed to initiate call", e)
                 }
-                context.startActivity(intent)
-                Log.i("EmergencyManager", "Emergency call initiated to $primaryContact")
-            } catch (e: SecurityException) {
-                Log.e("EmergencyManager", "Permission denied for CALL_PHONE", e)
-            } catch (e: Exception) {
-                Log.e("EmergencyManager", "Failed to initiate call", e)
             }
         } else {
             Log.w("EmergencyManager", "No trusted contact found for automatic call.")
@@ -379,7 +396,8 @@ class EmergencyManager(private val context: Context) {
 
     private fun sendEmergencySms(mapsLink: String) {
         val trigger = RemoteSmsReceiver.TRIGGER_KEYWORD
-        sendCustomSms("EMERGENCY LIVE LOCATION! I need help. My current position: $mapsLink (This link will be updated every 2 mins) $trigger")
+        val message = "EMERGENCY SOS! I need help. Live Location: $mapsLink $trigger"
+        sendCustomSms(message)
     }
 
     fun sendCustomSms(message: String) {
@@ -400,18 +418,27 @@ class EmergencyManager(private val context: Context) {
             }
             
             for (contact in contacts) {
-                smsManager.sendTextMessage(contact, null, message, null, null)
+                val cleanContact = contact.replace("[^0-9+]".toRegex(), "").trim()
+                if (cleanContact.isEmpty()) continue
+
+                val parts = smsManager.divideMessage(message)
+                if (parts.size > 1) {
+                    smsManager.sendMultipartTextMessage(cleanContact, null, parts, null, null)
+                } else {
+                    smsManager.sendTextMessage(cleanContact, null, message, null, null)
+                }
+
                 try {
-                    val values = android.content.ContentValues().apply {
-                        put("address", contact)
+                    val values = ContentValues().apply {
+                        put("address", cleanContact)
                         put("body", message)
                         put("date", System.currentTimeMillis())
                         put("read", 1)
                         put("type", 2) // 2 = SENT
                     }
-                    context.contentResolver.insert(android.net.Uri.parse("content://sms/sent"), values)
+                    context.contentResolver.insert(Uri.parse("content://sms/sent"), values)
                 } catch (e: Exception) {
-                    // Handled gracefully if non-default SMS app restrictions apply
+                    // Handled gracefully if direct content provider write is blocked
                 }
             }
             Log.i("EmergencyManager", "SMS sent to ${contacts.size} contacts: $message")
