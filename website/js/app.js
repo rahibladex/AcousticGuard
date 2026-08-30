@@ -58,6 +58,28 @@ function initPresentationEngine() {
       slideCounter.textContent = `Slide ${currentSlide + 1} of ${totalSlides}`;
     }
 
+    // Auto-play and request fullscreen on Slide 7 (index 6)
+    const slide7Iframe = document.getElementById('slide7Video');
+    const slide7Container = document.getElementById('slide7VideoContainer');
+    
+    if (currentSlide === 6 && slide7Iframe) {
+      slide7Iframe.src = "https://www.youtube.com/embed/GI85h-b8QOw?autoplay=1&enablejsapi=1&rel=0";
+      setTimeout(() => {
+        try {
+          if (slide7Container && slide7Container.requestFullscreen) {
+            slide7Container.requestFullscreen().catch(() => {});
+          } else if (slide7Iframe && slide7Iframe.requestFullscreen) {
+            slide7Iframe.requestFullscreen().catch(() => {});
+          }
+        } catch (e) {}
+      }, 300);
+    } else if (slide7Iframe) {
+      slide7Iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
     if (prevBtn) prevBtn.disabled = currentSlide === 0;
     if (nextBtn) {
       if (currentSlide === totalSlides - 1) {
@@ -66,6 +88,26 @@ function initPresentationEngine() {
         nextBtn.textContent = 'Next Slide ➔';
       }
     }
+  }
+
+  function launchSlide7Fullscreen() {
+    const slide7Iframe = document.getElementById('slide7Video');
+    const slide7Container = document.getElementById('slide7VideoContainer');
+    if (slide7Iframe) {
+      slide7Iframe.src = "https://www.youtube.com/embed/GI85h-b8QOw?autoplay=1&enablejsapi=1&rel=0";
+      try {
+        if (slide7Container && slide7Container.requestFullscreen) {
+          slide7Container.requestFullscreen().catch(() => {});
+        } else if (slide7Iframe && slide7Iframe.requestFullscreen) {
+          slide7Iframe.requestFullscreen().catch(() => {});
+        }
+      } catch (e) {}
+    }
+  }
+
+  const playFsBtn = document.getElementById('playSlide7FullscreenBtn');
+  if (playFsBtn) {
+    playFsBtn.addEventListener('click', launchSlide7Fullscreen);
   }
 
   function goToSlide(idx) {
