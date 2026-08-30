@@ -81,6 +81,9 @@ class SettingsActivity : ComponentActivity() {
         var allowRemoteAlarm by remember { 
             mutableStateOf(prefs.getBoolean("allow_remote_alarm", true)) 
         }
+        var sendLocationOnTrackingStart by remember { 
+            mutableStateOf(prefs.getBoolean("send_location_on_tracking_start", true)) 
+        }
         var safeWalkDuration by remember { 
             mutableIntStateOf(prefs.getInt("safe_walk_duration", 15)) 
         }
@@ -163,6 +166,10 @@ class SettingsActivity : ComponentActivity() {
                             if (!it) {
                                 RemoteAlertService.stopAlert(this@SettingsActivity)
                             }
+                        }
+                        ToggleOption("Send Live Location on Tracking Start", sendLocationOnTrackingStart) {
+                            sendLocationOnTrackingStart = it
+                            prefs.edit().putBoolean("send_location_on_tracking_start", it).apply()
                         }
                     }
                 }

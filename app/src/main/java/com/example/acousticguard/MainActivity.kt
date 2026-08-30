@@ -268,30 +268,38 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun StartTrackingButton() {
         val haptic = LocalHapticFeedback.current
-        val interactionSource = remember { MutableInteractionSource() }
-        val isPressed by interactionSource.collectIsPressedAsState()
-        val scale by animateFloatAsState(if (isPressed) 0.95f else 1f, label = "scale")
 
-        Box(
+        Button(
+            onClick = {
+                try {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                } catch (e: Exception) {}
+                handleToggleClick()
+            },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(110.dp)
-                .graphicsLayer(scaleX = scale, scaleY = scale)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Brush.horizontalGradient(listOf(RoyalPurple, Color(0xFF5E0091))))
-                .clickable(interactionSource = interactionSource, indication = null) {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    handleToggleClick()
-                },
-            contentAlignment = Alignment.Center
+                .height(110.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = RoyalPurple,
+                contentColor = Color.White
+            ),
+            contentPadding = PaddingValues(0.dp)
         ) {
-            Text(
-                text = if (isEmergencyMode) "STOP EMERGENCY" else if (isSafetyModeActive) "STOP TRACKING" else "START TRACKING",
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 1.sp
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Brush.horizontalGradient(listOf(RoyalPurple, Color(0xFF5E0091)))),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (isEmergencyMode) "STOP EMERGENCY" else if (isSafetyModeActive) "STOP TRACKING" else "START TRACKING",
+                    color = Color.White,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.sp
+                )
+            }
         }
     }
 
@@ -703,7 +711,30 @@ class MainActivity : ComponentActivity() {
         } else {
             startService(serviceIntent)
         }
-        Toast.makeText(this, "Safety Mode Started", Toast.LENGTH_SHORT).show()
+
+        val prefs = getSharedPreferences("NariShaktiSOSPrefs", Context.MODE_PRIVATE)
+        val shouldSendLocation = prefs.getBoolean("send_location_on_tracking_start", true)
+        
+        if (shouldSendLocation) {
+            val locManager = EmergencyLocationManager(this)
+            locManager.startContinuousLocationUpdates()
+            locManager.getLastLocation { location ->
+                val validLoc = location ?: locManager.getImmediateBestLocation()
+                if (validLoc != null && EmergencyLocationManager.isValidLocation(validLoc)) {
+                    val mapsLink = "https://maps.google.com/?q=${validLoc.latitude},${validLoc.longitude}"
+                    emergencyManager.sendCustomSms("TEJASHWINI: Safety tracking started. Live Location: $mapsLink")
+                    runOnUiThread {
+                        Toast.makeText(this, "Tracking Started & Live Location Sent", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    runOnUiThread {
+                        Toast.makeText(this, "Safety Mode Started", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        } else {
+            Toast.makeText(this, "Safety Mode Started", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun stopSafetyMode() {
