@@ -138,29 +138,27 @@ class EmergencyLocationManager(private val context: Context) {
     }
 
     fun getLastLocation(callback: (Location?) -> Unit) {
-        // 1. If we have immediate coordinates, return immediately
         val immediate = getImmediateBestLocation()
         if (immediate != null) {
-            Log.i("EmergencyLocation", "getLastLocation: Returning immediate coordinates: ${immediate.latitude}, ${immediate.longitude}")
+            Log.i("EmergencyLocation", "getLastLocation: Immediate location found: ${immediate.latitude}, ${immediate.longitude}")
             callback(immediate)
             requestActiveFreshFix {}
             return
         }
 
-        // 2. Otherwise actively fetch fresh fix with 3s timeout
         var isDelivered = false
         val timeoutRunnable = Runnable {
             if (!isDelivered) {
                 isDelivered = true
                 val fallback = getImmediateBestLocation()
-                Log.w("EmergencyLocation", "getLastLocation timeout: fallback = $fallback")
+                Log.w("EmergencyLocation", "getLastLocation timeout: delivering fallback = $fallback")
                 callback(fallback)
             }
         }
-        mainHandler.postDelayed(timeoutRunnable, 3000)
+        mainHandler.postDelayed(timeoutRunnable, 2500)
 
         requestActiveFreshFix { freshLoc ->
-            if (!isDelivered && freshLoc != null) {
+            if (!isDelivered && freshLoc != null && isValidLocation(freshLoc)) {
                 isDelivered = true
                 mainHandler.removeCallbacks(timeoutRunnable)
                 updateCachedLocation(freshLoc)
@@ -170,8 +168,12 @@ class EmergencyLocationManager(private val context: Context) {
     }
 
     private fun requestActiveFreshFix(onResult: (Location?) -> Unit) {
+        val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (!hasFine && !hasCoarse) return
+
         try {
-            // Google Play Services Fused Location
+            // 1. Google Fused Last Location
             fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
                 if (isValidLocation(loc)) {
                     updateCachedLocation(loc)
@@ -179,6 +181,7 @@ class EmergencyLocationManager(private val context: Context) {
                 }
             }
 
+            // 2. Google Fused Current Location (High Accuracy)
             val cts = CancellationTokenSource()
             fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token)
                 .addOnSuccessListener { loc ->
@@ -202,11 +205,24 @@ class EmergencyLocationManager(private val context: Context) {
             Log.e("EmergencyLocation", "FusedLocation error in requestActiveFreshFix", e)
         }
 
-        // Native providers
+        // 3. Native LocationManager Active Request
         try {
             val mgr = locationManager
             if (mgr != null) {
-                val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+                val providers = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
+                val oneShotListener = object : LocationListener {
+                    override fun onLocationChanged(loc: Location) {
+                        if (isValidLocation(loc)) {
+                            updateCachedLocation(loc)
+                            onResult(loc)
+                            try { mgr.removeUpdates(this) } catch (e: Exception) {}
+                        }
+                    }
+                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+                    override fun onProviderEnabled(provider: String) {}
+                    override fun onProviderDisabled(provider: String) {}
+                }
+
                 for (p in providers) {
                     try {
                         val last = mgr.getLastKnownLocation(p)
@@ -214,8 +230,16 @@ class EmergencyLocationManager(private val context: Context) {
                             updateCachedLocation(last)
                             onResult(last)
                         }
+                        if (mgr.isProviderEnabled(p)) {
+                            mgr.requestLocationUpdates(p, 0L, 0f, oneShotListener, Looper.getMainLooper())
+                        }
                     } catch (e: Exception) {}
                 }
+
+                // Cleanup oneShotListener after 4 seconds
+                mainHandler.postDelayed({
+                    try { mgr.removeUpdates(oneShotListener) } catch (e: Exception) {}
+                }, 4000)
             }
         } catch (e: Exception) {}
     }
@@ -236,7 +260,7 @@ class EmergencyLocationManager(private val context: Context) {
         // 2. Fused location updates
         try {
             val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5_000)
-                .setMinUpdateIntervalMillis(3_000)
+                .setMinUpdateIntervalMillis(2_000)
                 .setMinUpdateDistanceMeters(1f)
                 .build()
 
@@ -280,7 +304,7 @@ class EmergencyLocationManager(private val context: Context) {
                 for (p in providers) {
                     try {
                         if (mgr.isProviderEnabled(p)) {
-                            mgr.requestLocationUpdates(p, 3000L, 1f, listener, Looper.getMainLooper())
+                            mgr.requestLocationUpdates(p, 2000L, 1f, listener, Looper.getMainLooper())
                         }
                     } catch (e: Exception) {}
                 }
